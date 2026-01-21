@@ -1,0 +1,181 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useUser } from '@/hooks/use-user'
+import { useExpensesByPeriod } from '@/hooks/use-expenses'
+import { useHouseholdIncome } from '@/hooks/use-incomes'
+import { useBudgetByPeriod } from '@/hooks/use-budgets'
+import { useCategories } from '@/hooks/use-categories'
+import { getCurrentBudgetPeriod, formatPeriodDisplay } from '@/lib/utils/budget-period'
+import { KPICards } from '@/components/dashboard/kpi-cards'
+import { BudgetOverview } from '@/components/dashboard/budget-overview'
+import { ExpenseChart } from '@/components/dashboard/expense-chart'
+import { RecentExpenses } from '@/components/dashboard/recent-expenses'
+import { RecurringExpensesWidget } from '@/components/dashboard/recurring-expenses-widget'
+import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
+import { motion } from 'framer-motion'
+import { createClient } from '@/lib/supabase/client'
+
+export default function DashboardPage() {
+  const [setupDone, setSetupDone] = useState(false)
+  const { data: user, isLoading: userLoading } = useUser()
+  const { data: categories, refetch: refetchCategories } = useCategories()
+  const supabase = createClient()
+
+  // Auto-setup: Create categories if they don't exist
+  useEffect(() => {
+    async function ensureSetup() {
+      if (setupDone || !user?.id) return
+      
+      // Check if categories exist
+      if (categories && categories.length > 0) {
+        setSetupDone(true)
+        return
+      }
+
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) return
+
+        console.log('Running auto-setup for user:', authUser.id)
+        
+        const response = await fetch('/api/setup-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: authUser.id,
+            email: authUser.email,
+            firstName: user.first_name,
+            lastName: user.last_name,
+          }),
+        })
+
+        const result = await response.json()
+        console.log('Auto-setup result:', result)
+        
+        if (response.ok) {
+          // Refresh categories
+          refetchCategories()
+        }
+      } catch (error) {
+        console.error('Auto-setup error:', error)
+      }
+      
+      setSetupDone(true)
+    }
+
+    ensureSetup()
+  }, [user, categories, setupDone, supabase, refetchCategories])
+  const salaryDay = user?.salary_day || 25
+  const currentPeriod = getCurrentBudgetPeriod(salaryDay)
+  
+  const { data: expenses = [], isLoading: expensesLoading } = useExpensesByPeriod(salaryDay)
+  const { data: householdIncome } = useHouseholdIncome()
+  const { data: budget } = useBudgetByPeriod(currentPeriod.period)
+
+  if (userLoading || expensesLoading) {
+    return <DashboardSkeleton />
+  }
+
+  // Calculate totals - use household income (both partners combined)
+  const totalIncome = householdIncome?.total_income ?? 0
+  
+  // Calculate total spent considering cost assignment
+  // - personal: full amount
+  // - shared: 50% of the amount (split with partner)
+  // - partner: 0 (doesn't count toward user's budget, partner pays)
+  const totalSpent = expenses.reduce((sum, exp) => {
+    const assignment = exp.cost_assignment || 'personal'
+    if (assignment === 'partner') return sum // Partner pays, not user
+    if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
+    return sum + exp.amount // personal - full amount
+  }, 0)
+  
+  // Calculate budget amounts by type
+  const budgetItems = {
+    fixed: budget?.budget_items
+      ?.filter(item => item.type === 'fixedExpense')
+      .reduce((sum, item) => sum + item.amount, 0) || 0,
+    variable: budget?.budget_items
+      ?.filter(item => item.type === 'variableExpense')
+      .reduce((sum, item) => sum + item.amount, 0) || 0,
+    savings: budget?.budget_items
+      ?.filter(item => item.type === 'savings')
+      .reduce((sum, item) => sum + item.amount, 0) || 0,
+  }
+
+  // "Kvar att spendera" should show:
+  // - If budget exists: Total budgeted expenses - spent
+  // - If no budget: Total income - spent (what's actually available)
+  const hasBudget = !!(budget && (budgetItems.fixed + budgetItems.variable + budgetItems.savings) > 0)
+  const totalBudgetedExpenses = budgetItems.fixed + budgetItems.variable
+  const availableToSpend = hasBudget 
+    ? totalBudgetedExpenses  // Budget amount for expenses
+    : totalIncome            // Full income when no budget
+
+  const savingsRate = totalIncome > 0 
+    ? (budgetItems.savings / totalIncome) * 100 
+    : 0
+
+  return (
+    <div className="p-4 space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-1"
+      >
+        <h1 className="text-2xl font-bold text-stacka-olive">
+          Hej, {user?.first_name}! 👋
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {formatPeriodDisplay(currentPeriod.period)}
+        </p>
+      </motion.div>
+
+      {/* KPI Cards */}
+      <KPICards 
+        totalBudget={availableToSpend}
+        totalSpent={totalSpent}
+        savingsRate={savingsRate}
+        salaryDay={salaryDay}
+        hasBudget={hasBudget}
+        totalIncome={totalIncome}
+      />
+
+      {/* Charts Row */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <BudgetOverview 
+            expenses={expenses} 
+            budgetItems={budgetItems}
+          />
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <ExpenseChart expenses={expenses} />
+        </motion.div>
+      </div>
+
+      {/* Recurring Expenses Widget */}
+      <RecurringExpensesWidget />
+
+      {/* Recent Expenses */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <RecentExpenses expenses={expenses.slice(0, 5)} />
+      </motion.div>
+    </div>
+  )
+}
+

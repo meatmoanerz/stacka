@@ -1,26 +1,329 @@
 @import "tailwindcss";
 
+/* Stacka Design System */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Stacka Color Palette - More vibrant and lively */
+  --stacka-blue: #6fc0d1;
+  --stacka-mint: #c8e5da;
+  --stacka-peach: #fce0c8;
+  --stacka-coral: #eda99a;
+  --stacka-sage: #b8c9b5;
+  --stacka-olive: #526654;
+  --stacka-gold: #d4a574;
+
+  /* Semantic Colors */
+  --background: #FAFBF9;
+  --foreground: #2d3130;
+  --card: #FFFFFF;
+  --card-foreground: #2d3130;
+  --popover: #FFFFFF;
+  --popover-foreground: #2d3130;
+  --primary: #526654;
+  --primary-foreground: #FFFFFF;
+  --secondary: #6fc0d1;
+  --secondary-foreground: #2d3130;
+  --muted: #F5F7F4;
+  --muted-foreground: #4a5148;
+  --accent: #eda99a;
+  --accent-foreground: #2d3130;
+  --destructive: #E53935;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E8E3;
+  --input: #E5E8E3;
+  --ring: #6fc0d1;
+
+  /* Status Colors */
+  --success: #4CAF50;
+  --warning: #FF9800;
+  --danger: #E53935;
+  --info: #6fc0d1;
+
+  /* Background Gradient */
+  --background-gradient: linear-gradient(
+    135deg,
+    #f8faf9 0%,
+    #fafbf9 40%,
+    #fdf9f6 100%
+  );
+
+  /* Radius */
+  --radius: 0.75rem;
+}
+
+/* Dark Mode */
+.dark {
+  /* Stacka Color Palette - Adjusted for dark mode */
+  --stacka-blue: #7ab8c5;
+  --stacka-mint: #2a3d33;
+  --stacka-peach: #d4c4b5;
+  --stacka-coral: #e8a89a;
+  --stacka-sage: #3d4a3e;
+  --stacka-olive: #8fa390;
+  --stacka-gold: #c9a06a;
+
+  /* Semantic Colors */
+  --background: #0f1210;
+  --foreground: #f0f4f1;
+  --card: #1a1e1b;
+  --card-foreground: #f0f4f1;
+  --popover: #1a1e1b;
+  --popover-foreground: #f0f4f1;
+  --primary: #8fa390;
+  --primary-foreground: #0f1210;
+  --secondary: #7ab8c5;
+  --secondary-foreground: #0f1210;
+  --muted: #242824;
+  --muted-foreground: #9ca89e;
+  --accent: #e8a89a;
+  --accent-foreground: #0f1210;
+  --destructive: #e85555;
+  --destructive-foreground: #FFFFFF;
+  --border: #2d332e;
+  --input: #2d332e;
+  --ring: #7ab8c5;
+
+  /* Status Colors */
+  --success: #5cb865;
+  --warning: #ffa726;
+  --danger: #e85555;
+  --info: #7ab8c5;
+
+  /* Background Gradient - Dark version */
+  --background-gradient: linear-gradient(
+    135deg,
+    #0f1210 0%,
+    #121615 40%,
+    #151312 100%
+  );
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  /* Stacka Palette */
+  --color-stacka-blue: var(--stacka-blue);
+  --color-stacka-mint: var(--stacka-mint);
+  --color-stacka-peach: var(--stacka-peach);
+  --color-stacka-coral: var(--stacka-coral);
+  --color-stacka-sage: var(--stacka-sage);
+  --color-stacka-olive: var(--stacka-olive);
+  --color-stacka-gold: var(--stacka-gold);
+  
+  /* Status */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  
+  /* Fonts */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base styles */
+* {
+  border-color: var(--border);
 }
 
 body {
-  background: var(--background);
+  background: var(--background-gradient);
+  background-attachment: fixed;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Safe area for mobile */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom);
+  }
+}
+
+/* Ensure minimum tap target size */
+.min-touch {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Stagger animation delays */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+
+/* Glass effect */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Focus visible styles - Improved accessibility */
+*:focus-visible {
+  outline: 2px solid var(--stacka-olive);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Screen reader only - for skip links and a11y */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only:focus,
+.sr-only.focus\:not-sr-only:focus {
+  position: absolute;
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--card);
+  border: 2px solid var(--stacka-olive);
+  border-radius: 0.5rem;
+  color: var(--stacka-olive);
+  font-weight: 500;
+  z-index: 9999;
+  top: 0.5rem;
+  left: 0.5rem;
+}
+
+/* Input styles for mobile */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Touch action for better mobile UX */
+.touch-pan-y {
+  touch-action: pan-y;
+}
+
+/* Disable text selection on buttons/interactive elements */
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
 }

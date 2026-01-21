@@ -1,0 +1,19 @@
+{
+  "name": "Stacka",
+  "short_name": "Stacka",
+  "description": "Din personliga ekonomi - budget, utgifter och sparande",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFBF9",
+  "theme_color": "#657166",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
