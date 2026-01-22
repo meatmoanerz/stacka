@@ -210,6 +210,7 @@ npx vercel --prod
 ## Version History
 
 ```
+v0.2.0 - Enhanced savings goals: auto-category creation, expense contributions, custom goal types, detail page
 v0.1.1 - Update Next.js to fix security vulnerability
 v0.1.0 - Initial release with full budget/expense management
 ```

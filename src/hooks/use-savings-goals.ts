@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import type { SavingsGoal, SavingsGoalWithCategory } from '@/types'
-import type { InsertTables, UpdateTables } from '@/types/database'
+import type { SavingsGoal, SavingsGoalWithCategory, SavingsGoalContributionWithExpense } from '@/types'
+import type { UpdateTables } from '@/types/database'
 
 export function useSavingsGoals() {
   const supabase = createClient()
@@ -15,7 +15,8 @@ export function useSavingsGoals() {
         .from('savings_goals')
         .select(`
           *,
-          category:categories(*)
+          category:categories(*),
+          custom_goal_type:custom_goal_types(*)
         `)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
@@ -26,29 +27,118 @@ export function useSavingsGoals() {
   })
 }
 
+export function useSavingsGoal(id: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['savings-goals', id],
+    queryFn: async () => {
+      if (!id) return null
+
+      const { data, error } = await supabase
+        .from('savings_goals')
+        .select(`
+          *,
+          category:categories(*),
+          custom_goal_type:custom_goal_types(*)
+        `)
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+      return data as SavingsGoalWithCategory
+    },
+    enabled: !!id,
+  })
+}
+
+export function useSavingsGoalContributions(goalId: string | null) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['savings-goal-contributions', goalId],
+    queryFn: async () => {
+      if (!goalId) return []
+
+      const { data, error } = await supabase
+        .from('savings_goal_contributions')
+        .select(`
+          *,
+          expense:expenses(*)
+        `)
+        .eq('savings_goal_id', goalId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data as SavingsGoalContributionWithExpense[]
+    },
+    enabled: !!goalId,
+  })
+}
+
+interface CreateSavingsGoalInput {
+  name: string
+  description?: string
+  target_amount?: number
+  target_date?: string
+  starting_balance?: number
+  starting_balance_user1?: number
+  starting_balance_user2?: number
+  monthly_savings_enabled?: boolean
+  monthly_savings_amount?: number
+  goal_category?: 'emergency' | 'vacation' | 'home' | 'car' | 'education' | 'retirement' | 'other'
+  custom_goal_type_id?: string | null
+  is_shared?: boolean
+}
+
 export function useCreateSavingsGoal() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (goal: InsertTables<'savings_goals'>) => {
+    mutationFn: async (goal: CreateSavingsGoalInput) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      // Step 1: Create a category with the same name as the savings goal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('savings_goals') as any)
+      const { data: categoryData, error: categoryError } = await (supabase.from('categories') as any)
         .insert({
-          ...goal,
           user_id: user.id,
+          name: goal.name,
+          cost_type: 'Savings',
+          subcategory: 'Savings',
+          is_default: false,
         })
         .select()
         .single()
 
-      if (error) throw error
-      return data as SavingsGoal
+      if (categoryError) throw categoryError
+
+      // Step 2: Create the savings goal with the new category
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: savingsGoalData, error: savingsGoalError } = await (supabase.from('savings_goals') as any)
+        .insert({
+          ...goal,
+          user_id: user.id,
+          category_id: categoryData.id,
+        })
+        .select()
+        .single()
+
+      if (savingsGoalError) throw savingsGoalError
+
+      // Step 3: Update the category to link back to the savings goal
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from('categories') as any)
+        .update({ linked_savings_goal_id: savingsGoalData.id })
+        .eq('id', categoryData.id)
+
+      return savingsGoalData as SavingsGoal
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] })
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
     },
   })
 }

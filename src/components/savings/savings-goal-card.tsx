@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -8,7 +9,7 @@ import { formatCurrency } from '@/lib/utils/formatters'
 import { format, differenceInDays, differenceInMonths } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
-import { MoreHorizontal, Trash2, Edit2, CheckCircle2, Users, PiggyBank, Calendar } from 'lucide-react'
+import { MoreHorizontal, Trash2, Edit2, CheckCircle2, Users, PiggyBank, Calendar, ChevronRight } from 'lucide-react'
 import { useDeleteSavingsGoal, useUpdateSavingsGoal } from '@/hooks/use-savings-goals'
 import { toast } from 'sonner'
 import type { SavingsGoalWithCategory, GoalCategory } from '@/types'
@@ -45,9 +46,17 @@ interface SavingsGoalCardProps {
 }
 
 export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
+  const router = useRouter()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const deleteGoal = useDeleteSavingsGoal()
   const updateGoal = useUpdateSavingsGoal()
+
+  // Get icon - use custom type icon if available
+  const goalIcon = goal.custom_goal_type?.icon || goalCategoryIcons[goal.goal_category]
+
+  const handleCardClick = () => {
+    router.push(`/savings/${goal.id}`)
+  }
 
   // Calculate progress
   const currentAmount = goal.starting_balance + goal.starting_balance_user1 + goal.starting_balance_user2
@@ -108,16 +117,19 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
 
   return (
     <>
-      <Card className={cn(
-        "border-0 shadow-sm overflow-hidden transition-all",
-        isCompleted && "bg-stacka-sage/10 ring-2 ring-stacka-sage/30"
-      )}>
+      <Card
+        className={cn(
+          "border-0 shadow-sm overflow-hidden transition-all cursor-pointer hover:shadow-md active:scale-[0.99]",
+          isCompleted && "bg-stacka-sage/10 ring-2 ring-stacka-sage/30"
+        )}
+        onClick={handleCardClick}
+      >
         <CardContent className="p-4">
           {/* Header */}
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-stacka-peach/20 flex items-center justify-center text-lg">
-                {goalCategoryIcons[goal.goal_category]}
+                {goalIcon}
               </div>
               <div>
                 <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -125,7 +137,7 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
                   {isCompleted && <CheckCircle2 className="w-4 h-4 text-stacka-olive" />}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {goal.category?.name}
+                  {goal.custom_goal_type?.name || goal.category?.name}
                   {goal.is_shared && (
                     <span className="inline-flex items-center gap-1 ml-2 text-stacka-blue">
                       <Users className="w-3 h-3" />
@@ -136,8 +148,9 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
               </div>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -164,6 +177,8 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
 
           {/* Progress */}
@@ -218,7 +233,7 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Ta bort sparmål?</AlertDialogTitle>
             <AlertDialogDescription>
-              Är du säker på att du vill ta bort "{goal.name}"? Sparmålet kommer att arkiveras och kan inte återställas.
+              Är du säker på att du vill ta bort &quot;{goal.name}&quot;? Sparmålet kommer att arkiveras och kan inte återställas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

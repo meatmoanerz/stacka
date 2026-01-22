@@ -102,6 +102,7 @@ export type Database = {
           is_default: boolean
           is_shared_expense: boolean
           shared_with: string | null
+          linked_savings_goal_id: string | null
           created_at: string
           updated_at: string
         }
@@ -115,6 +116,7 @@ export type Database = {
           is_default?: boolean
           is_shared_expense?: boolean
           shared_with?: string | null
+          linked_savings_goal_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -128,8 +130,35 @@ export type Database = {
           is_default?: boolean
           is_shared_expense?: boolean
           shared_with?: string | null
+          linked_savings_goal_id?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      custom_goal_types: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          icon: string
+          color: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          icon?: string
+          color?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          icon?: string
+          color?: string
+          created_at?: string
         }
       }
       incomes: {
@@ -464,6 +493,7 @@ export type Database = {
           monthly_savings_amount: number
           recurring_expense_id: string | null
           goal_category: 'emergency' | 'vacation' | 'home' | 'car' | 'education' | 'retirement' | 'other'
+          custom_goal_type_id: string | null
           status: 'active' | 'completed' | 'archived'
           is_shared: boolean
           completed_at: string | null
@@ -487,6 +517,7 @@ export type Database = {
           monthly_savings_amount?: number
           recurring_expense_id?: string | null
           goal_category?: 'emergency' | 'vacation' | 'home' | 'car' | 'education' | 'retirement' | 'other'
+          custom_goal_type_id?: string | null
           status?: 'active' | 'completed' | 'archived'
           is_shared?: boolean
           completed_at?: string | null
@@ -510,12 +541,45 @@ export type Database = {
           monthly_savings_amount?: number
           recurring_expense_id?: string | null
           goal_category?: 'emergency' | 'vacation' | 'home' | 'car' | 'education' | 'retirement' | 'other'
+          custom_goal_type_id?: string | null
           status?: 'active' | 'completed' | 'archived'
           is_shared?: boolean
           completed_at?: string | null
           archived_at?: string | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      savings_goal_contributions: {
+        Row: {
+          id: string
+          savings_goal_id: string
+          expense_id: string
+          user_id: string
+          amount: number
+          user1_amount: number
+          user2_amount: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          savings_goal_id: string
+          expense_id: string
+          user_id: string
+          amount: number
+          user1_amount?: number
+          user2_amount?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          savings_goal_id?: string
+          expense_id?: string
+          user_id?: string
+          amount?: number
+          user1_amount?: number
+          user2_amount?: number
+          created_at?: string
         }
       }
       statement_analyses: {
