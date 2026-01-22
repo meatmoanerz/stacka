@@ -1,7 +1,8 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts'
+import { ComponentErrorBoundary } from '@/components/error/component-error-boundary'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { formatCurrency } from '@/lib/utils/formatters'
 import type { ExpenseWithCategory } from '@/types'
 
@@ -15,7 +16,7 @@ const COLORS = {
   Savings: '#4CAF50',  // success
 }
 
-export function ExpenseChart({ expenses }: ExpenseChartProps) {
+function ExpenseChartContent({ expenses }: ExpenseChartProps) {
   // Group expenses by cost type
   const dataByType = expenses.reduce((acc, expense) => {
     const type = expense.category?.cost_type || 'Variable'
@@ -73,8 +74,8 @@ export function ExpenseChart({ expenses }: ExpenseChartProps) {
           {chartData.map((item) => (
             <div key={item.name} className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
+                <div
+                  className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
                 <span className="text-muted-foreground">{item.name}</span>
@@ -92,3 +93,10 @@ export function ExpenseChart({ expenses }: ExpenseChartProps) {
   )
 }
 
+export function ExpenseChart({ expenses }: ExpenseChartProps) {
+  return (
+    <ComponentErrorBoundary componentName="Fördelning">
+      <ExpenseChartContent expenses={expenses} />
+    </ComponentErrorBoundary>
+  )
+}

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type { RecurringExpense, Category } from '@/types'
 import type { InsertTables, UpdateTables } from '@/types/database'
+import { toast } from 'sonner'
+import { handleMutationError } from '@/lib/utils/error-handler'
 
 export interface RecurringExpenseWithCategory extends RecurringExpense {
   category: Category
@@ -142,7 +144,41 @@ export function useToggleRecurringExpense() {
       if (error) throw error
       return data as RecurringExpense
     },
-    onSuccess: () => {
+    onMutate: async ({ id, is_active }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['recurring-expenses'] })
+
+      // Snapshot current data for all recurring expense queries
+      const previousRecurringExpenses = queryClient.getQueriesData<RecurringExpenseWithCategory[]>({
+        queryKey: ['recurring-expenses'],
+      })
+
+      // Optimistically update the is_active status
+      queryClient.setQueriesData<RecurringExpenseWithCategory[]>(
+        { queryKey: ['recurring-expenses'] },
+        (old) => {
+          if (!old) return []
+          return old.map((expense) =>
+            expense.id === id
+              ? { ...expense, is_active, updated_at: new Date().toISOString() }
+              : expense
+          )
+        }
+      )
+
+      return { previousRecurringExpenses }
+    },
+    onError: (error, _variables, context) => {
+      // Rollback to previous data on error
+      if (context?.previousRecurringExpenses) {
+        context.previousRecurringExpenses.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+      handleMutationError('recurring', 'toggle', error, toast.error)
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
       queryClient.invalidateQueries({ queryKey: ['recurring-expenses'] })
     },
   })

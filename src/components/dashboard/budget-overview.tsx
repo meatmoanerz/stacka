@@ -1,6 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ComponentErrorBoundary } from '@/components/error/component-error-boundary'
 import { Progress } from '@/components/ui/progress'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { cn } from '@/lib/utils/cn'
@@ -15,7 +16,7 @@ interface BudgetOverviewProps {
   }
 }
 
-export function BudgetOverview({ expenses, budgetItems }: BudgetOverviewProps) {
+function BudgetOverviewContent({ expenses, budgetItems }: BudgetOverviewProps) {
   // Calculate spent by category type
   const spentByType = expenses.reduce((acc, expense) => {
     const type = expense.category?.cost_type || 'Variable'
@@ -65,8 +66,8 @@ export function BudgetOverview({ expenses, budgetItems }: BudgetOverviewProps) {
                   {formatCurrency(cat.spent)} / {formatCurrency(cat.budget)}
                 </span>
               </div>
-              <Progress 
-                value={Math.min(percentage, 100)} 
+              <Progress
+                value={Math.min(percentage, 100)}
                 className="h-2"
                 indicatorClassName={cn(
                   cat.color,
@@ -81,3 +82,10 @@ export function BudgetOverview({ expenses, budgetItems }: BudgetOverviewProps) {
   )
 }
 
+export function BudgetOverview({ expenses, budgetItems }: BudgetOverviewProps) {
+  return (
+    <ComponentErrorBoundary componentName="Budgetöversikt">
+      <BudgetOverviewContent expenses={expenses} budgetItems={budgetItems} />
+    </ComponentErrorBoundary>
+  )
+}

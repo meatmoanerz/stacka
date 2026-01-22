@@ -322,8 +322,8 @@
 ### 4.1 Prestanda & Optimerad UX
 - [x] **Loading States** ✅ KLART
   - [x] Skeletons för laddning (Dashboard, Expenses, Budget)
-  - [ ] Optimistiska uppdateringar
-  - [ ] Error boundaries
+  - [x] Optimistiska uppdateringar ✅ KLART
+  - [x] Error boundaries ✅ KLART
 
 - [ ] **Optimeringar**
   - [ ] Image optimization
@@ -369,11 +369,11 @@
 ---
 
 ### 4.4 Mobile Optimization
-- [ ] **Mobile-first Förbättringar**
-  - [ ] Touch-optimering
-  - [ ] Swipe-gester
-  - [ ] Bottom sheet för åtgärder
-  - [ ] Keyboard handling
+- [x] **Mobile-first Förbättringar** ✅ KLART (viktigaste implementerat)
+  - [x] Touch-optimering (44px minsta storlek, active states)
+  - [ ] Swipe-gester (nice-to-have)
+  - [ ] Bottom sheet för åtgärder (nice-to-have)
+  - [x] Keyboard handling (numeric keypad, auto-dismiss, auto-focus)
 
 - [ ] **PWA Features**
   - [x] Manifest file
@@ -531,13 +531,14 @@
 - [ ] Statement Analyzer
 
 ### Fas 4: Polering & UX
-**Status:** 🟡 ~50% klar
+**Status:** 🟢 ~75% klar
 
 - [x] Grundläggande i18n
 - [x] PWA manifest
 - [x] Realtid-synkning (expenses)
 - [x] Skeleton loaders (Dashboard, Expenses, Budget)
-- [ ] Mobile optimization
+- [x] Mobile optimization (touch targets, keyboard handling) ✅ KLART
+- [x] Error boundaries och optimistiska uppdateringar ✅ KLART
 - [ ] Analytics
 
 ---
@@ -569,10 +570,10 @@
    - [x] Amorteringsplan (per månad/år)
    - [x] Beräkningar (total skuld, snittränta, månadskostnad)
 
-6. **Polering**
-   - [ ] Mobile optimization
+6. **Polering** ✅ KLART
+   - [x] Mobile optimization (touch targets, keyboard handling)
    - [x] Loading states (Skeleton loaders)
-   - [ ] Error handling
+   - [x] Error handling (error boundaries, optimistic updates)
 
 ---
 
@@ -615,9 +616,28 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-01-14
+**Senast uppdaterad:** 2026-01-22
 
-### Senaste ändringar (2026-01-14):
+### Senaste ändringar (2026-01-22):
+- ✅ **Error Handling & Stability - komplett implementation:**
+  - Error boundaries för hela appen (ErrorBoundary, PageErrorFallback, ComponentErrorBoundary)
+  - App layout wrappas med error boundary för att fånga rendering-fel
+  - Dashboard-widgets wrappas med component error boundaries
+  - Centraliserad error handler utility (`error-handler.ts`) med svenska felmeddelanden
+  - Optimistiska uppdateringar för utgifter och återkommande utgifter
+  - Rollback-funktionalitet vid fel
+  - TanStack Query best practices implementerade
+
+- ✅ **Mobile Optimization - komplett implementation:**
+  - Touch targets uppdaterade till minst 44px (Apple HIG standard)
+  - Delete-knappar, filter-knappar, toggle-knappar förbättrade
+  - Active states för touch feedback (scale animations)
+  - Touch-target utility classes i globals.css
+  - Keyboard handling: NumberInput-komponent, auto-dismiss, auto-focus
+  - Dialog auto-focus för bättre keyboard UX
+  - Numeric keypad för numeriska inputs på mobil
+
+### Tidigare ändringar (2026-01-14):
 - ✅ **CCM (Credit Card Manager) - komplett implementation v2:**
   - Omstrukturerad: CCM-dashboard nu under /settings/ccm
   - Inställningar flyttade till /settings/ccm/settings

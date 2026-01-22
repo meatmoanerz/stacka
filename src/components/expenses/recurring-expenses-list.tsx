@@ -356,7 +356,7 @@ export function RecurringExpensesList() {
                       transition={{ delay: index * 0.02 }}
                       onClick={() => openEditDialog(expense)}
                       className={cn(
-                        'flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer',
+                        'flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all cursor-pointer',
                         index !== recurringExpenses.length - 1 && 'border-b border-border',
                         !expense.is_active && 'opacity-50'
                       )}
@@ -410,7 +410,7 @@ export function RecurringExpensesList() {
                             handleToggleActive(expense.id, expense.is_active)
                           }}
                           className={cn(
-                            'h-8 w-8 rounded-full flex items-center justify-center transition-all',
+                            'h-11 w-11 rounded-full flex items-center justify-center transition-all active:scale-95',
                             expense.is_active
                               ? 'bg-stacka-olive/20 text-stacka-olive shadow-[0_0_12px_rgba(108,119,84,0.4)] hover:shadow-[0_0_16px_rgba(108,119,84,0.6)]'
                               : 'bg-muted/50 text-muted-foreground hover:bg-muted'
@@ -483,7 +483,7 @@ export function RecurringExpensesList() {
                             key={cat.id}
                             type="button"
                             onClick={() => handleCategorySelect(cat)}
-                            className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between"
+                            className="w-full px-4 py-3 min-h-[44px] text-left hover:bg-muted/50 active:bg-muted flex items-center justify-between"
                           >
                             <span>{cat.name}</span>
                             {editCategoryId === cat.id && <Check className="w-4 h-4 text-stacka-olive" />}
@@ -501,7 +501,7 @@ export function RecurringExpensesList() {
                             key={cat.id}
                             type="button"
                             onClick={() => handleCategorySelect(cat)}
-                            className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between"
+                            className="w-full px-4 py-3 min-h-[44px] text-left hover:bg-muted/50 active:bg-muted flex items-center justify-between"
                           >
                             <span>{cat.name}</span>
                             {editCategoryId === cat.id && <Check className="w-4 h-4 text-stacka-olive" />}

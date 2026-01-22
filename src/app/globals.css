@@ -327,3 +327,26 @@ input[type="number"] {
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* Touch Target Optimization - Apple HIG recommends minimum 44px */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Icon button with expanded touch area using pseudo-element */
+.touch-target-icon {
+  position: relative;
+}
+
+.touch-target-icon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
