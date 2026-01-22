@@ -13,6 +13,8 @@ export type Loan = Tables<'loans'>
 export type LoanGroup = Tables<'loan_groups'>
 export type LoanInterestHistory = Tables<'loan_interest_history'>
 export type SavingsGoal = Tables<'savings_goals'>
+export type SavingsGoalContribution = Tables<'savings_goal_contributions'>
+export type CustomGoalType = Tables<'custom_goal_types'>
 export type PartnerConnection = Tables<'partner_connections'>
 export type StatementAnalysis = Tables<'statement_analyses'>
 export type StatementTransaction = Tables<'statement_transactions'>
@@ -42,6 +44,11 @@ export interface BudgetWithItems extends Budget {
 
 export interface SavingsGoalWithCategory extends SavingsGoal {
   category: Category
+  custom_goal_type?: CustomGoalType | null
+}
+
+export interface SavingsGoalContributionWithExpense extends SavingsGoalContribution {
+  expense: Expense
 }
 
 export interface LoanWithGroup extends Loan {

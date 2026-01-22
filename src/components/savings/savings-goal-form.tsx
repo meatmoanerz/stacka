@@ -8,16 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useCreateSavingsGoal } from '@/hooks/use-savings-goals'
-import { useCategoriesByType } from '@/hooks/use-categories'
+import { useCustomGoalTypes, useCreateCustomGoalType } from '@/hooks/use-custom-goal-types'
 import { usePartner } from '@/hooks/use-user'
 import { toast } from 'sonner'
-import { Loader2, ChevronDown, Check, Target, Wallet, Calendar, PiggyBank } from 'lucide-react'
+import { Loader2, ChevronDown, Check, Target, Wallet, Calendar, PiggyBank, Plus, X } from 'lucide-react'
 import { format, addMonths } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
-import type { Category, GoalCategory } from '@/types'
+import type { GoalCategory, CustomGoalType } from '@/types'
 
-const goalCategoryIcons: Record<GoalCategory, string> = {
+const defaultGoalCategoryIcons: Record<GoalCategory, string> = {
   emergency: '🛡️',
   vacation: '✈️',
   home: '🏠',
@@ -27,7 +27,7 @@ const goalCategoryIcons: Record<GoalCategory, string> = {
   other: '🎯',
 }
 
-const goalCategoryLabels: Record<GoalCategory, string> = {
+const defaultGoalCategoryLabels: Record<GoalCategory, string> = {
   emergency: 'Buffert',
   vacation: 'Semester',
   home: 'Boende',
@@ -46,8 +46,8 @@ const savingsGoalSchema = z.object({
   monthly_savings_enabled: z.boolean(),
   monthly_savings_amount: z.number().min(0),
   goal_category: z.enum(['emergency', 'vacation', 'home', 'car', 'education', 'retirement', 'other']),
+  custom_goal_type_id: z.string().nullable(),
   is_shared: z.boolean(),
-  category_id: z.string().uuid('Välj en kategori'),
 })
 
 type SavingsGoalFormData = z.infer<typeof savingsGoalSchema>
@@ -58,18 +58,20 @@ interface SavingsGoalFormProps {
 
 export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
   const { data: partner } = usePartner()
-  const { savings: savingsCategories } = useCategoriesByType()
+  const { data: customGoalTypes = [] } = useCustomGoalTypes()
   const createGoal = useCreateSavingsGoal()
+  const createCustomType = useCreateCustomGoalType()
   const hasPartner = !!partner
 
   const [amountDisplay, setAmountDisplay] = useState('')
   const [startingDisplay, setStartingDisplay] = useState('')
   const [monthlyDisplay, setMonthlyDisplay] = useState('')
-  const [categoryOpen, setCategoryOpen] = useState(false)
   const [goalTypeOpen, setGoalTypeOpen] = useState(false)
+  const [showAddCustomType, setShowAddCustomType] = useState(false)
+  const [newCustomTypeName, setNewCustomTypeName] = useState('')
+  const [newCustomTypeIcon, setNewCustomTypeIcon] = useState('🎯')
 
   const amountInputRef = useRef<HTMLInputElement>(null)
-  const categoryDropdownRef = useRef<HTMLDivElement>(null)
   const goalTypeDropdownRef = useRef<HTMLDivElement>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
 
@@ -84,34 +86,26 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
       monthly_savings_enabled: false,
       monthly_savings_amount: 0,
       goal_category: 'other',
+      custom_goal_type_id: null,
       is_shared: false,
-      category_id: savingsCategories[0]?.id || '',
     },
   })
-
-  // Set default category when categories load
-  useEffect(() => {
-    if (savingsCategories.length > 0 && !form.getValues('category_id')) {
-      form.setValue('category_id', savingsCategories[0].id)
-    }
-  }, [savingsCategories, form])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
-        setCategoryOpen(false)
-      }
       if (goalTypeDropdownRef.current && !goalTypeDropdownRef.current.contains(event.target as Node)) {
         setGoalTypeOpen(false)
+        setShowAddCustomType(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const selectedCategory = savingsCategories.find(c => c.id === form.watch('category_id'))
   const selectedGoalCategory = form.watch('goal_category')
+  const selectedCustomTypeId = form.watch('custom_goal_type_id')
+  const selectedCustomType = customGoalTypes.find(t => t.id === selectedCustomTypeId)
 
   const handleAmountChange = (setter: (val: string) => void, field: keyof SavingsGoalFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
@@ -127,14 +121,35 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
     }
   }
 
-  const handleCategorySelect = (category: Category) => {
-    form.setValue('category_id', category.id)
-    setCategoryOpen(false)
-  }
-
   const handleGoalCategorySelect = (goalCategory: GoalCategory) => {
     form.setValue('goal_category', goalCategory)
+    form.setValue('custom_goal_type_id', null)
     setGoalTypeOpen(false)
+    setShowAddCustomType(false)
+  }
+
+  const handleCustomTypeSelect = (customType: CustomGoalType) => {
+    form.setValue('custom_goal_type_id', customType.id)
+    form.setValue('goal_category', 'other') // Set to other when using custom type
+    setGoalTypeOpen(false)
+    setShowAddCustomType(false)
+  }
+
+  const handleAddCustomType = async () => {
+    if (!newCustomTypeName.trim()) return
+
+    try {
+      const newType = await createCustomType.mutateAsync({
+        name: newCustomTypeName.trim(),
+        icon: newCustomTypeIcon,
+      })
+      handleCustomTypeSelect(newType)
+      setNewCustomTypeName('')
+      setNewCustomTypeIcon('🎯')
+      toast.success('Ny måltyp skapad!')
+    } catch {
+      toast.error('Kunde inte skapa måltyp')
+    }
   }
 
   const formatDisplayDate = (dateStr: string) => {
@@ -146,11 +161,34 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
     }
   }
 
+  const getSelectedTypeDisplay = () => {
+    if (selectedCustomType) {
+      return {
+        icon: selectedCustomType.icon,
+        label: selectedCustomType.name,
+      }
+    }
+    return {
+      icon: defaultGoalCategoryIcons[selectedGoalCategory],
+      label: defaultGoalCategoryLabels[selectedGoalCategory],
+    }
+  }
+
+  const typeDisplay = getSelectedTypeDisplay()
+
   async function onSubmit(data: SavingsGoalFormData) {
     try {
       await createGoal.mutateAsync({
-        ...data,
-        user_id: '', // Will be set by hook
+        name: data.name,
+        description: data.description,
+        target_amount: data.target_amount,
+        target_date: data.target_date,
+        starting_balance: data.starting_balance,
+        monthly_savings_enabled: data.monthly_savings_enabled,
+        monthly_savings_amount: data.monthly_savings_amount,
+        goal_category: data.goal_category,
+        custom_goal_type_id: data.custom_goal_type_id,
+        is_shared: data.is_shared,
       })
       toast.success('Sparmål skapat!')
 
@@ -167,8 +205,8 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
         monthly_savings_enabled: false,
         monthly_savings_amount: 0,
         goal_category: 'other',
+        custom_goal_type_id: null,
         is_shared: false,
-        category_id: savingsCategories[0]?.id || '',
       })
 
       onSuccess?.()
@@ -178,6 +216,8 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
   }
 
   const inputStyles = "w-full h-11 px-4 rounded-xl bg-muted text-sm transition-colors focus:outline-none focus:ring-0 focus:border-0"
+
+  const commonIcons = ['🎯', '💰', '🏖️', '🎓', '💍', '🎁', '🏋️', '🎮', '📱', '💻', '🎵', '🎨']
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -219,7 +259,7 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
         <Label htmlFor="name" className="text-muted-foreground text-sm">Namn på sparmål</Label>
         <input
           id="name"
-          placeholder="T.ex. Semesterresa, Buffert, Ny bil..."
+          placeholder="T.ex. Thailand 2027, Buffert, Ny bil..."
           {...form.register('name')}
           className={cn(inputStyles, "placeholder:text-muted-foreground/50")}
           style={{ outline: 'none', boxShadow: 'none' }}
@@ -229,9 +269,12 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
             {form.formState.errors.name.message}
           </p>
         )}
+        <p className="text-xs text-muted-foreground">
+          En kategori med detta namn skapas automatiskt
+        </p>
       </div>
 
-      {/* Goal Type Selector */}
+      {/* Goal Type Selector with Custom Types */}
       <div className="space-y-2" ref={goalTypeDropdownRef}>
         <Label className="text-muted-foreground text-sm">Typ av sparmål</Label>
         <div className="relative">
@@ -240,15 +283,19 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
             onClick={() => setGoalTypeOpen(!goalTypeOpen)}
           >
             <div className="flex items-center gap-2">
-              <span>{goalCategoryIcons[selectedGoalCategory]}</span>
-              <span>{goalCategoryLabels[selectedGoalCategory]}</span>
+              <span>{typeDisplay.icon}</span>
+              <span>{typeDisplay.label}</span>
             </div>
             <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", goalTypeOpen && "rotate-180")} />
           </div>
 
           {goalTypeOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
-              {(Object.keys(goalCategoryLabels) as GoalCategory[]).map((cat) => (
+            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-80 overflow-y-auto">
+              {/* Default categories */}
+              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50">
+                Standardtyper
+              </div>
+              {(Object.keys(defaultGoalCategoryLabels) as GoalCategory[]).map((cat) => (
                 <button
                   key={cat}
                   type="button"
@@ -256,54 +303,110 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
                   className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <span>{goalCategoryIcons[cat]}</span>
-                    <span>{goalCategoryLabels[cat]}</span>
+                    <span>{defaultGoalCategoryIcons[cat]}</span>
+                    <span>{defaultGoalCategoryLabels[cat]}</span>
                   </div>
-                  {selectedGoalCategory === cat && (
+                  {selectedGoalCategory === cat && !selectedCustomTypeId && (
                     <Check className="w-4 h-4 text-stacka-olive" />
                   )}
                 </button>
               ))}
+
+              {/* Custom types */}
+              {customGoalTypes.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50">
+                    Egna typer
+                  </div>
+                  {customGoalTypes.map((type) => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => handleCustomTypeSelect(type)}
+                      className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{type.icon}</span>
+                        <span>{type.name}</span>
+                      </div>
+                      {selectedCustomTypeId === type.id && (
+                        <Check className="w-4 h-4 text-stacka-olive" />
+                      )}
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Add new custom type */}
+              <div className="border-t">
+                {!showAddCustomType ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomType(true)}
+                    className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center gap-2 text-stacka-olive transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Lägg till egen typ</span>
+                  </button>
+                ) : (
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Namn på typ"
+                        value={newCustomTypeName}
+                        onChange={(e) => setNewCustomTypeName(e.target.value)}
+                        className="flex-1 h-9 px-3 rounded-lg bg-muted text-sm"
+                        style={{ outline: 'none' }}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddCustomType(false)
+                          setNewCustomTypeName('')
+                        }}
+                        className="p-2 hover:bg-muted rounded-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {commonIcons.map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          onClick={() => setNewCustomTypeIcon(icon)}
+                          className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center text-lg transition-all",
+                            newCustomTypeIcon === icon
+                              ? "bg-stacka-sage/30 ring-2 ring-stacka-olive"
+                              : "bg-muted hover:bg-muted/80"
+                          )}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleAddCustomType}
+                      disabled={!newCustomTypeName.trim() || createCustomType.isPending}
+                    >
+                      {createCustomType.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : null}
+                      Skapa typ
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Category (Savings category from database) */}
-      {savingsCategories.length > 0 && (
-        <div className="space-y-2" ref={categoryDropdownRef}>
-          <Label className="text-muted-foreground text-sm">Budgetkategori</Label>
-          <div className="relative">
-            <div
-              className={cn(inputStyles, "flex items-center justify-between cursor-pointer")}
-              onClick={() => setCategoryOpen(!categoryOpen)}
-            >
-              <span className={cn(!selectedCategory && "text-muted-foreground/50")}>
-                {selectedCategory?.name || 'Välj kategori'}
-              </span>
-              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", categoryOpen && "rotate-180")} />
-            </div>
-
-            {categoryOpen && (
-              <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-48 overflow-y-auto">
-                {savingsCategories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => handleCategorySelect(cat)}
-                    className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
-                  >
-                    <span>{cat.name}</span>
-                    {form.watch('category_id') === cat.id && (
-                      <Check className="w-4 h-4 text-stacka-olive" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Target Date */}
       <div className="space-y-2">
