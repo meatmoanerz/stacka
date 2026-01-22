@@ -1,14 +1,14 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
+import { ComponentErrorBoundary } from '@/components/error/component-error-boundary'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { useActiveRecurringExpenses } from '@/hooks/use-recurring-expenses'
 import { RefreshCw, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 
-export function RecurringExpensesWidget() {
+function RecurringExpensesWidgetContent() {
   const { data: recurringExpenses = [], isLoading } = useActiveRecurringExpenses()
 
   // Calculate total monthly recurring expenses
@@ -125,5 +125,13 @@ export function RecurringExpensesWidget() {
         </CardContent>
       </Card>
     </motion.div>
+  )
+}
+
+export function RecurringExpensesWidget() {
+  return (
+    <ComponentErrorBoundary componentName="Återkommande utgifter">
+      <RecurringExpensesWidgetContent />
+    </ComponentErrorBoundary>
   )
 }

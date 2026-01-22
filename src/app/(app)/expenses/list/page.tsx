@@ -172,7 +172,7 @@ export default function ExpenseListPage() {
                       {dayExpenses.map((expense) => (
                         <div
                           key={expense.id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                          className="flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all"
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-stacka-sage/20 flex items-center justify-center text-lg">
@@ -196,7 +196,7 @@ export default function ExpenseListPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              className="h-11 w-11 -mr-2 text-muted-foreground hover:text-destructive active:scale-95 transition-transform"
                               onClick={() => setDeleteExpense(expense)}
                             >
                               <Trash2 className="h-4 w-4" />

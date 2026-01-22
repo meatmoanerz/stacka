@@ -130,6 +130,11 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
   }
 
   async function onSubmit(data: ExpenseFormData) {
+    // Dismiss keyboard on mobile by blurring active element
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
     try {
       await createExpense.mutateAsync({
         ...data,

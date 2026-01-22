@@ -94,7 +94,7 @@ export default function AddExpensePage() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200",
+              "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 min-h-[44px] rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98]",
               activeTab === tab.id
                 ? "bg-white shadow-sm text-stacka-olive"
                 : "text-muted-foreground hover:text-foreground"
@@ -139,7 +139,7 @@ export default function AddExpensePage() {
                 <button
                   onClick={() => setFilter('all')}
                   className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all",
+                    "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all active:scale-[0.98]",
                     filter === 'all'
                       ? "bg-white shadow-sm text-stacka-olive"
                       : "text-muted-foreground hover:text-foreground"
@@ -150,7 +150,7 @@ export default function AddExpensePage() {
                 <button
                   onClick={() => setFilter('ccm')}
                   className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1",
+                    "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1 active:scale-[0.98]",
                     filter === 'ccm'
                       ? "bg-white shadow-sm text-stacka-coral"
                       : "text-muted-foreground hover:text-foreground"
@@ -162,7 +162,7 @@ export default function AddExpensePage() {
                 <button
                   onClick={() => setFilter('direct')}
                   className={cn(
-                    "flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all",
+                    "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all active:scale-[0.98]",
                     filter === 'direct'
                       ? "bg-white shadow-sm text-stacka-olive"
                       : "text-muted-foreground hover:text-foreground"
@@ -195,7 +195,7 @@ export default function AddExpensePage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                       className={cn(
-                        "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors",
+                        "flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all",
                         index !== filteredExpenses.length - 1 && "border-b border-border"
                       )}
                     >
@@ -231,7 +231,7 @@ export default function AddExpensePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          className="h-11 w-11 -mr-2 text-muted-foreground hover:text-destructive active:scale-95 transition-transform"
                           onClick={() => handleDelete(expense.id, expense.description)}
                         >
                           <Trash2 className="h-4 w-4" />
