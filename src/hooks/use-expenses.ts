@@ -221,6 +221,7 @@ export function useCreateExpense() {
           is_default: false,
           is_shared_expense: false,
           shared_with: null,
+          linked_savings_goal_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
