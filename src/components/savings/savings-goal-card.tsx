@@ -58,8 +58,10 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
     router.push(`/savings/${goal.id}`)
   }
 
-  // Calculate progress
-  const currentAmount = goal.starting_balance + goal.starting_balance_user1 + goal.starting_balance_user2
+  // Calculate progress - for shared goals, use user amounts; for personal goals, use starting_balance
+  const currentAmount = goal.is_shared
+    ? goal.starting_balance_user1 + goal.starting_balance_user2
+    : goal.starting_balance
   const targetAmount = goal.target_amount || 0
   const progressPercent = targetAmount > 0 ? Math.min((currentAmount / targetAmount) * 100, 100) : 0
   const remaining = Math.max(targetAmount - currentAmount, 0)

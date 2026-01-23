@@ -32,10 +32,13 @@ export default function SavingsPage() {
   const activeGoals = savingsGoals.filter(g => g.status === 'active')
   const completedGoals = savingsGoals.filter(g => g.status === 'completed')
 
-  // Calculate totals
-  const totalSaved = savingsGoals.reduce((sum, goal) =>
-    sum + goal.starting_balance + goal.starting_balance_user1 + goal.starting_balance_user2, 0
-  )
+  // Calculate totals - for shared goals, use user amounts; for personal goals, use starting_balance
+  const totalSaved = savingsGoals.reduce((sum, goal) => {
+    const goalAmount = goal.is_shared
+      ? goal.starting_balance_user1 + goal.starting_balance_user2
+      : goal.starting_balance
+    return sum + goalAmount
+  }, 0)
   const totalTarget = activeGoals.reduce((sum, goal) => sum + (goal.target_amount || 0), 0)
   const totalMonthlySavings = activeGoals
     .filter(g => g.monthly_savings_enabled)

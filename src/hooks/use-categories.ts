@@ -11,9 +11,13 @@ export function useCategories(options?: { costType?: CostType }) {
   return useQuery({
     queryKey: ['categories', options?.costType],
     queryFn: async () => {
+      // Fetch categories with their linked savings goal status
       let query = supabase
         .from('categories')
-        .select('*')
+        .select(`
+          *,
+          linked_savings_goal:savings_goals!linked_savings_goal_id(status)
+        `)
         .order('name')
 
       if (options?.costType) {
@@ -22,7 +26,25 @@ export function useCategories(options?: { costType?: CostType }) {
 
       const { data, error } = await query
       if (error) throw error
-      return data as Category[]
+
+      // Filter out categories whose linked savings goal is archived
+      // A category should be shown if:
+      // 1. It has no linked savings goal (linked_savings_goal_id is null)
+      // 2. Its linked savings goal is active (not archived)
+      const filteredCategories = (data || []).filter((cat) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const linkedGoal = (cat as any).linked_savings_goal
+        // Show category if no linked goal, or if linked goal is active/null status
+        if (!linkedGoal) return true
+        return linkedGoal.status === 'active' || linkedGoal.status === null
+      }).map((cat) => {
+        // Remove the linked_savings_goal from the response to match Category type
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { linked_savings_goal, ...category } = cat as Category & { linked_savings_goal?: unknown }
+        return category
+      })
+
+      return filteredCategories as Category[]
     },
   })
 }

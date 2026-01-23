@@ -82,7 +82,10 @@ export default function SavingsGoalDetailPage({ params }: { params: Promise<{ id
     )
   }
 
-  const totalSaved = goal.starting_balance + goal.starting_balance_user1 + goal.starting_balance_user2
+  // Calculate total saved - for shared goals, use user amounts; for personal goals, use starting_balance
+  const totalSaved = goal.is_shared
+    ? goal.starting_balance_user1 + goal.starting_balance_user2
+    : goal.starting_balance
   const targetAmount = goal.target_amount || 0
   const progress = targetAmount > 0 ? Math.min((totalSaved / targetAmount) * 100, 100) : 0
   const remaining = Math.max(targetAmount - totalSaved, 0)
