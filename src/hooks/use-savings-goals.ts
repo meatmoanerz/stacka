@@ -11,18 +11,41 @@ export function useSavingsGoals() {
   return useQuery({
     queryKey: ['savings-goals'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get the current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      // Query savings goals - include goals where status is 'active' OR null (for legacy data)
+      // Use left join for category (it might not exist for legacy goals)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase
         .from('savings_goals')
         .select(`
           *,
           category:categories(*),
           custom_goal_type:custom_goal_types(*)
         `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
+        .eq('user_id', user.id)
+        .or('status.eq.active,status.is.null')
+        .order('created_at', { ascending: false }) as any)
 
-      if (error) throw error
-      return data as SavingsGoalWithCategory[]
+      if (error) {
+        console.error('Error fetching savings goals:', error)
+        throw error
+      }
+
+      // Log for debugging
+      const goals = (data || []) as SavingsGoalWithCategory[]
+      goals.forEach(goal => {
+        if (!goal.category) {
+          console.warn(`Savings goal "${goal.name}" (${goal.id}) has no linked category - category_id: ${goal.category_id}`)
+        }
+        if (!goal.status || goal.status !== 'active') {
+          console.warn(`Savings goal "${goal.name}" (${goal.id}) has status: ${goal.status}`)
+        }
+      })
+
+      return goals
     },
   })
 }
@@ -100,6 +123,8 @@ export function useCreateSavingsGoal() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      console.log('Creating savings goal for user:', user.id, 'with name:', goal.name)
+
       // Step 1: Create a category with the same name as the savings goal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: categoryData, error: categoryError } = await (supabase.from('categories') as any)
@@ -113,20 +138,45 @@ export function useCreateSavingsGoal() {
         .select()
         .single()
 
-      if (categoryError) throw categoryError
+      if (categoryError) {
+        console.error('Failed to create category:', categoryError)
+        throw new Error(`Kunde inte skapa kategori: ${categoryError.message}`)
+      }
+
+      console.log('Created category:', categoryData.id, categoryData.name)
 
       // Step 2: Create the savings goal with the new category
+      // Be explicit about the fields to avoid spreading invalid properties
+      const savingsGoalInsert = {
+        user_id: user.id,
+        category_id: categoryData.id,
+        name: goal.name,
+        description: goal.description || null,
+        target_amount: goal.target_amount || null,
+        target_date: goal.target_date || null,
+        starting_balance: goal.starting_balance || 0,
+        starting_balance_user1: goal.starting_balance_user1 || 0,
+        starting_balance_user2: goal.starting_balance_user2 || 0,
+        monthly_savings_enabled: goal.monthly_savings_enabled || false,
+        monthly_savings_amount: goal.monthly_savings_amount || 0,
+        goal_category: goal.goal_category || 'other',
+        custom_goal_type_id: goal.custom_goal_type_id || null,
+        is_shared: goal.is_shared || false,
+        status: 'active', // Explicitly set status to 'active'
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: savingsGoalData, error: savingsGoalError } = await (supabase.from('savings_goals') as any)
-        .insert({
-          ...goal,
-          user_id: user.id,
-          category_id: categoryData.id,
-        })
+        .insert(savingsGoalInsert)
         .select()
         .single()
 
-      if (savingsGoalError) throw savingsGoalError
+      if (savingsGoalError) {
+        console.error('Failed to create savings goal:', savingsGoalError)
+        throw new Error(`Kunde inte skapa sparmål: ${savingsGoalError.message}`)
+      }
+
+      console.log('Created savings goal:', savingsGoalData.id, savingsGoalData.name, 'status:', savingsGoalData.status)
 
       // Step 3: Update the category to link back to the savings goal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

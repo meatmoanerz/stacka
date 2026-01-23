@@ -43,7 +43,7 @@ export interface BudgetWithItems extends Budget {
 }
 
 export interface SavingsGoalWithCategory extends SavingsGoal {
-  category: Category
+  category: Category | null
   custom_goal_type?: CustomGoalType | null
 }
 
