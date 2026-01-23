@@ -58,8 +58,10 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
     router.push(`/savings/${goal.id}`)
   }
 
-  // Calculate progress
-  const currentAmount = goal.starting_balance + goal.starting_balance_user1 + goal.starting_balance_user2
+  // Calculate progress - for shared goals, use user amounts; for personal goals, use starting_balance
+  const currentAmount = goal.is_shared
+    ? goal.starting_balance_user1 + goal.starting_balance_user2
+    : goal.starting_balance
   const targetAmount = goal.target_amount || 0
   const progressPercent = targetAmount > 0 ? Math.min((currentAmount / targetAmount) * 100, 100) : 0
   const remaining = Math.max(targetAmount - currentAmount, 0)
@@ -155,21 +157,21 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 {onEdit && (
-                  <DropdownMenuItem onClick={() => onEdit(goal)}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(goal) }}>
                     <Edit2 className="mr-2 h-4 w-4" />
                     Redigera
                   </DropdownMenuItem>
                 )}
                 {!isCompleted && (
-                  <DropdownMenuItem onClick={handleMarkComplete}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete() }}>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Markera som uppnått
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
-                  onClick={() => setShowDeleteDialog(true)}
+                  onClick={(e) => { e.stopPropagation(); setShowDeleteDialog(true) }}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
@@ -229,7 +231,7 @@ export function SavingsGoalCard({ goal, onEdit }: SavingsGoalCardProps) {
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Ta bort sparmål?</AlertDialogTitle>
             <AlertDialogDescription>

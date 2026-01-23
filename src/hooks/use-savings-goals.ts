@@ -211,15 +211,29 @@ export function useDeleteSavingsGoal() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // First, get the savings goal to find its linked category
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('savings_goals') as any)
+      const { data: goal, error: fetchError } = await (supabase.from('savings_goals') as any)
+        .select('category_id')
+        .eq('id', id)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      // Archive the savings goal
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: archiveError } = await (supabase.from('savings_goals') as any)
         .update({ status: 'archived', archived_at: new Date().toISOString() })
         .eq('id', id)
 
-      if (error) throw error
+      if (archiveError) throw archiveError
+
+      // Note: The linked category will automatically be hidden because
+      // useCategories filters out categories linked to archived savings goals
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings-goals'] })
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
     },
   })
 }
