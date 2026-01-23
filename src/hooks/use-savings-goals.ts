@@ -15,18 +15,18 @@ export function useSavingsGoals() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Query savings goals - include goals where status is 'active' OR null (for legacy data)
-      // Use left join for category (it might not exist for legacy goals)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Use explicit foreign key hint to resolve ambiguous relationship
+      // savings_goals has category_id -> categories.id
+      // categories has linked_savings_goal_id -> savings_goals.id
+      // We want to use category_id, so specify it explicitly
       const { data, error } = await (supabase
         .from('savings_goals')
         .select(`
           *,
-          category:categories(*),
-          custom_goal_type:custom_goal_types(*)
+          category:categories!category_id(*)
         `)
         .eq('user_id', user.id)
-        .or('status.eq.active,status.is.null')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .order('created_at', { ascending: false }) as any)
 
       if (error) {
@@ -34,16 +34,10 @@ export function useSavingsGoals() {
         throw error
       }
 
-      // Log for debugging
-      const goals = (data || []) as SavingsGoalWithCategory[]
-      goals.forEach(goal => {
-        if (!goal.category) {
-          console.warn(`Savings goal "${goal.name}" (${goal.id}) has no linked category - category_id: ${goal.category_id}`)
-        }
-        if (!goal.status || goal.status !== 'active') {
-          console.warn(`Savings goal "${goal.name}" (${goal.id}) has status: ${goal.status}`)
-        }
-      })
+      // Filter to active or null status in JS instead of in query
+      const goals = (data || []).filter((goal: SavingsGoalWithCategory) => {
+        return goal.status === 'active' || goal.status === null || goal.status === undefined
+      }) as SavingsGoalWithCategory[]
 
       return goals
     },
@@ -58,15 +52,17 @@ export function useSavingsGoal(id: string | null) {
     queryFn: async () => {
       if (!id) return null
 
-      const { data, error } = await supabase
+      // Use explicit foreign key hint to resolve ambiguous relationship
+      const { data, error } = await (supabase
         .from('savings_goals')
         .select(`
           *,
-          category:categories(*),
+          category:categories!category_id(*),
           custom_goal_type:custom_goal_types(*)
         `)
         .eq('id', id)
-        .single()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .single() as any)
 
       if (error) throw error
       return data as SavingsGoalWithCategory
@@ -123,8 +119,6 @@ export function useCreateSavingsGoal() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      console.log('Creating savings goal for user:', user.id, 'with name:', goal.name)
-
       // Step 1: Create a category with the same name as the savings goal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: categoryData, error: categoryError } = await (supabase.from('categories') as any)
@@ -142,8 +136,6 @@ export function useCreateSavingsGoal() {
         console.error('Failed to create category:', categoryError)
         throw new Error(`Kunde inte skapa kategori: ${categoryError.message}`)
       }
-
-      console.log('Created category:', categoryData.id, categoryData.name)
 
       // Step 2: Create the savings goal with the new category
       // Be explicit about the fields to avoid spreading invalid properties
@@ -175,8 +167,6 @@ export function useCreateSavingsGoal() {
         console.error('Failed to create savings goal:', savingsGoalError)
         throw new Error(`Kunde inte skapa sparmål: ${savingsGoalError.message}`)
       }
-
-      console.log('Created savings goal:', savingsGoalData.id, savingsGoalData.name, 'status:', savingsGoalData.status)
 
       // Step 3: Update the category to link back to the savings goal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
