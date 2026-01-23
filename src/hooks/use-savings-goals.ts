@@ -15,18 +15,26 @@ export function useSavingsGoals() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Query savings goals - include goals where status is 'active' OR null (for legacy data)
-      // Use left join for category (it might not exist for legacy goals)
+      console.log('Fetching savings goals for user:', user.id)
+
+      // First, try to get ALL savings goals for this user (no status filter) to debug
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: allGoals, error: debugError } = await (supabase
+        .from('savings_goals')
+        .select('id, name, status, user_id, category_id')
+        .eq('user_id', user.id) as any)
+
+      console.log('DEBUG - All goals for user:', allGoals, 'Error:', debugError)
+
+      // Now get the full data with joins
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase
         .from('savings_goals')
         .select(`
           *,
-          category:categories(*),
-          custom_goal_type:custom_goal_types(*)
+          category:categories(*)
         `)
         .eq('user_id', user.id)
-        .or('status.eq.active,status.is.null')
         .order('created_at', { ascending: false }) as any)
 
       if (error) {
@@ -34,16 +42,18 @@ export function useSavingsGoals() {
         throw error
       }
 
-      // Log for debugging
-      const goals = (data || []) as SavingsGoalWithCategory[]
-      goals.forEach(goal => {
-        if (!goal.category) {
-          console.warn(`Savings goal "${goal.name}" (${goal.id}) has no linked category - category_id: ${goal.category_id}`)
+      console.log('Savings goals result:', data?.length || 0, 'goals found')
+
+      // Filter to active or null status in JS instead of in query
+      const goals = (data || []).filter((goal: SavingsGoalWithCategory) => {
+        const isActive = goal.status === 'active' || goal.status === null || goal.status === undefined
+        if (!isActive) {
+          console.log(`Goal "${goal.name}" filtered out - status: ${goal.status}`)
         }
-        if (!goal.status || goal.status !== 'active') {
-          console.warn(`Savings goal "${goal.name}" (${goal.id}) has status: ${goal.status}`)
-        }
-      })
+        return isActive
+      }) as SavingsGoalWithCategory[]
+
+      console.log('After filtering:', goals.length, 'active goals')
 
       return goals
     },
