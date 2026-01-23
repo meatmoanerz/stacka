@@ -545,35 +545,40 @@
 
 ## 🎯 Nästa Steg (Prioriterad Order)
 
-### Omedelbara Prioriteringar:
+### Aktuella Prioriteringar:
 
-1. **Slutför MVP Grundfunktioner**
-   - [ ] Återkommande utgifter
-   - [ ] CCM grundläggande
+1. **Statement Analyzer (AI)**
+   - [ ] Upload bankutdrag (PDF/CSV)
+   - [ ] AI-parsing av transaktioner
+   - [ ] Automatisk kategorisering
+   - [ ] Förhandsgranskning och import
 
-2. **Budget System** ✅ KLART
-   - [x] Skapa budget UI
-   - [x] Budget beräkningar
-   - [x] Budget vs faktiskt visning
+2. **Dashboard Partner-vyer**
+   - [ ] Visa partnerns senaste utgifter
+   - [ ] Hushålls-översikt
+   - [ ] Delade vs personliga utgifter
 
-3. **Partner Förbättringar** ✅ KLART
-   - [x] Realtid-synkning (Supabase Realtime)
-   - [x] Expense assignment UI
+3. **Notifikationer & Alerts**
+   - [ ] Budget-varningar (när man närmar sig limit)
+   - [ ] In-app notifikationer
+   - [ ] Push notifications (valfritt)
 
-4. **Sparande-mål** ✅ KLART
-   - [x] UI för sparande (tabs, formulär, kort)
-   - [x] Progress tracking (procent, kr, tid kvar)
+4. **Analytics & Insights**
+   - [ ] Månadsrapport
+   - [ ] Kategori-analys
+   - [ ] Trend-diagram
+   - [ ] Export till CSV/PDF
 
-5. **Lån** ✅ KLART
-   - [x] Lånhantering UI (lägg till, redigera, ta bort)
-   - [x] Lånegrupper (Bolån, Övriga)
-   - [x] Amorteringsplan (per månad/år)
-   - [x] Beräkningar (total skuld, snittränta, månadskostnad)
+5. **Internationalisering**
+   - [ ] Komplettera engelska översättningar
+   - [ ] Språk-växlare i inställningar
+   - [ ] Datum/valuta-formatering per språk
 
-6. **Polering** ✅ KLART
-   - [x] Mobile optimization (touch targets, keyboard handling)
-   - [x] Loading states (Skeleton loaders)
-   - [x] Error handling (error boundaries, optimistic updates)
+### Kända Buggar att Fixa:
+
+1. **WebSocket/Realtime**
+   - ⚠️ Realtime fungerar ej pga newline i API-nyckel (Vercel env var)
+   - Åtgärd: Ta bort newline från `NEXT_PUBLIC_SUPABASE_ANON_KEY` i Vercel
 
 ---
 
@@ -616,9 +621,17 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-01-22
+**Senast uppdaterad:** 2026-01-23
 
-### Senaste ändringar (2026-01-22):
+### Senaste ändringar (2026-01-23):
+- ✅ **Sparande-mål buggfixar:**
+  - Fixat PGRST201-fel (ambiguous FK) genom explicit FK-hint `categories!category_id`
+  - Korrigerad beräkning: delade mål använder `user1 + user2`, personliga använder `starting_balance`
+  - Kategorier döljs automatiskt när sparändamål arkiveras (via join med savings_goals.status)
+  - Fixat klick-propagering på dropdown-meny och delete-dialog
+  - Rensad debug-logging från hooks
+
+### Tidigare ändringar (2026-01-22):
 - ✅ **Error Handling & Stability - komplett implementation:**
   - Error boundaries för hela appen (ErrorBoundary, PageErrorFallback, ComponentErrorBoundary)
   - App layout wrappas med error boundary för att fånga rendering-fel

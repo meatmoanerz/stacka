@@ -210,6 +210,7 @@ npx vercel --prod
 ## Version History
 
 ```
+v0.2.1 - Savings bugfixes: calculation fix, category archiving, FK relationship fixes, click propagation
 v0.2.0 - Enhanced savings goals: auto-category creation, expense contributions, custom goal types, detail page
 v0.1.1 - Update Next.js to fix security vulnerability
 v0.1.0 - Initial release with full budget/expense management
@@ -245,6 +246,6 @@ npx vercel alias <previous-deployment-url> stacka-three.vercel.app
 
 ---
 
-**Last Updated**: v0.1.1 - 2026-01-21
+**Last Updated**: v0.2.1 - 2026-01-23
 **Maintainer**: Development Team
 **Production URL**: https://stacka-three.vercel.app

@@ -345,6 +345,55 @@ UI Update (automatic via React Query)
 - `ccm_invoices` table tracks invoice periods with actual billed amount
 - Hook: `use-ccm-invoices.ts`
 
+### Ambiguous FK Relationships
+
+**Problem:** When two tables have multiple FK relationships, PostgREST (Supabase) can't determine which FK to use for joins, causing PGRST201 errors.
+
+**Example:** `savings_goals` and `categories` have two FK relationships:
+- `savings_goals.category_id` → `categories.id`
+- `categories.linked_savings_goal_id` → `savings_goals.id`
+
+**Solution:** Use explicit FK hint in select query:
+
+```typescript
+// ❌ Wrong - causes PGRST201 error
+const { data } = await supabase
+  .from('savings_goals')
+  .select('*, category:categories(*)')
+
+// ✅ Correct - explicit FK hint
+const { data } = await supabase
+  .from('savings_goals')
+  .select('*, category:categories!category_id(*)')
+  //                            ^^^^^^^^^^^^^ FK column name
+```
+
+**Pattern for hooks with ambiguous FKs:**
+
+```typescript
+export function useSavingsGoals() {
+  return useQuery({
+    queryKey: ['savings-goals'],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('savings_goals')
+        .select(`
+          *,
+          category:categories!category_id(*)
+        `)
+        .order('created_at', { ascending: false }) as any)
+      // Note: `as any` is needed because TypeScript doesn't know about FK hints
+
+      if (error) throw error
+      return data as SavingsGoalWithCategory[]
+    },
+  })
+}
+```
+
+**Tables with ambiguous FKs in this project:**
+- `savings_goals` ↔ `categories` (use `!category_id` or `!linked_savings_goal_id`)
+
 ### Form Pattern
 
 **Standard form implementation:**
@@ -1550,7 +1599,7 @@ return useMutation({
 
 ---
 
-**Last Updated:** 2026-01-22
+**Last Updated:** 2026-01-23
 
 **Maintainer:** Development Team
 
