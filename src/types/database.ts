@@ -190,6 +190,35 @@ export type Database = {
           updated_at?: string
         }
       }
+      monthly_incomes: {
+        Row: {
+          id: string
+          user_id: string
+          period: string
+          name: string
+          amount: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          period: string
+          name: string
+          amount: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          period?: string
+          name?: string
+          amount?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
       budgets: {
         Row: {
           id: string
@@ -663,6 +692,31 @@ export type Database = {
       get_partner_id: {
         Args: { user_id: string }
         Returns: string | null
+      }
+      get_household_monthly_incomes: {
+        Args: { p_period: string }
+        Returns: {
+          id: string
+          user_id: string
+          period: string
+          name: string
+          amount: number
+          is_own: boolean
+          owner_name: string
+          created_at: string
+        }[]
+      }
+      get_household_monthly_income_total: {
+        Args: { p_period: string }
+        Returns: {
+          total_income: number
+          user_income: number
+          partner_income: number
+        }
+      }
+      has_income_for_period: {
+        Args: { p_period: string }
+        Returns: boolean
       }
     }
     Enums: {

@@ -126,6 +126,18 @@
   - [x] Ta bort inkomst
   - [x] Hushållsinkomst funktion (för budget)
 
+- [x] **Månadsinkomster (Monthly Income)** ✅ KLART
+  - [x] Ny databastabell `monthly_incomes` med period-koppling
+  - [x] Registrera inkomster per budgetperiod (Lön, Barnbidrag, etc.)
+  - [x] Inkomstsida under /budget/income med CRUD
+  - [x] Period-väljare för att se/redigera olika månader
+  - [x] Kopiera inkomster från förra månaden
+  - [x] Visa partnerns inkomster (om kopplad)
+  - [x] Inkomstöversiktskort på budgetsidan
+  - [x] Påminnelse-popup efter lönedag om ingen inkomst registrerats
+  - [x] RLS-policies för user + partner access
+  - [x] RPC-funktioner för hushållsinkomst per period
+
 **Dependencies:** Profil-sidan måste finnas
 
 ---

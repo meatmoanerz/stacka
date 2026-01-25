@@ -3,6 +3,7 @@
 import { BottomNav } from './bottom-nav'
 import { Sidebar } from './sidebar'
 import { RealtimeProvider } from '@/components/realtime-provider'
+import { IncomeReminderDialog } from '@/components/income-reminder-dialog'
 import { cn } from '@/lib/utils/cn'
 
 interface AppShellProps {
@@ -41,6 +42,9 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile bottom nav - hidden on desktop */}
       <BottomNav className="md:hidden" />
+
+      {/* Income reminder popup */}
+      <IncomeReminderDialog />
     </RealtimeProvider>
   )
 }

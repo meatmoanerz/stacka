@@ -50,25 +50,68 @@ export async function POST(request: Request) {
 
     if (analysisError) throw analysisError
 
-    const fileContent = await file.text()
+    const isPdf = file.name.toLowerCase().endsWith('.pdf')
+    let completion
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: bankConfig.prompt
-        },
-        {
-          role: 'user',
-          content: `Här är kontoutdraget:\n\n${fileContent}`
-        }
-      ],
-      response_format: { type: 'json_object' }
-    })
+    if (isPdf) {
+      // For PDF files, convert to base64 and use GPT-4o vision
+      const arrayBuffer = await file.arrayBuffer()
+      const base64 = Buffer.from(arrayBuffer).toString('base64')
+
+      console.log(`Processing PDF: ${file.name}, size: ${arrayBuffer.byteLength} bytes`)
+
+      completion = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: bankConfig.prompt
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Analysera detta kontoutdrag och extrahera alla transaktioner enligt instruktionerna.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${base64}`,
+                  detail: 'high'
+                }
+              }
+            ]
+          }
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 4096
+      })
+    } else {
+      // For CSV files, send as text
+      const fileContent = await file.text()
+      console.log(`Processing CSV: ${file.name}, length: ${fileContent.length} chars`)
+
+      completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: bankConfig.prompt
+          },
+          {
+            role: 'user',
+            content: `Här är kontoutdraget:\n\n${fileContent}`
+          }
+        ],
+        response_format: { type: 'json_object' }
+      })
+    }
 
     const result = JSON.parse(completion.choices[0].message.content || '{}')
     const transactions: ParsedTransaction[] = result.transactions || []
+
+    console.log(`Transactions found: ${transactions.length}`)
 
     if (transactions.length > 0) {
       const transactionRows = transactions.map((t) => ({

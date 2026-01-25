@@ -4,6 +4,7 @@ import type { Tables, Enums } from './database'
 export type Profile = Tables<'profiles'>
 export type Category = Tables<'categories'>
 export type Income = Tables<'incomes'>
+export type MonthlyIncome = Tables<'monthly_incomes'>
 export type Budget = Tables<'budgets'>
 export type BudgetItem = Tables<'budget_items'>
 export type BudgetItemAssignment = Tables<'budget_item_assignments'>
@@ -61,6 +62,18 @@ export interface BudgetPeriod {
   startDate: Date
   endDate: Date
   displayName: string
+}
+
+// Monthly income with household context
+export interface HouseholdMonthlyIncome {
+  id: string
+  user_id: string
+  period: string
+  name: string
+  amount: number
+  is_own: boolean
+  owner_name: string
+  created_at: string
 }
 
 // User with partner
