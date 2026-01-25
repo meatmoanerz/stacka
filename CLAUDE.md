@@ -28,6 +28,7 @@ This document provides comprehensive guidance for AI assistants working with the
 
 **Key Features:**
 - Budget management with salary day-based periods
+- Monthly income tracking per budget period (salary, benefits, etc.)
 - Expense tracking with cost assignment (personal/shared/partner)
 - Partner connection and shared expense tracking
 - Real-time synchronization via Supabase
@@ -131,6 +132,7 @@ This document provides comprehensive guidance for AI assistants working with the
 │   │   ├── use-expenses.ts
 │   │   ├── use-expenses-realtime.ts
 │   │   ├── use-incomes.ts
+│   │   ├── use-monthly-incomes.ts
 │   │   ├── use-loans.ts
 │   │   ├── use-loan-groups.ts
 │   │   ├── use-recurring-expenses.ts
@@ -201,6 +203,7 @@ import { useExpenses } from '@/hooks/use-expenses'
 - `/budget/new` - Create new budget
 - `/budget/[id]` - View specific budget (read-only)
 - `/budget/[id]/edit` - Edit existing budget
+- `/budget/income` - Monthly income management
 - `/expenses` - Quick add expense view
 - `/expenses/list` - Full expense list with filters
 - `/savings` - Savings goals management
@@ -476,7 +479,7 @@ Expense/income categories with type and subcategory.
 ```
 
 #### incomes
-User income sources.
+User income sources (static/recurring).
 
 ```typescript
 {
@@ -489,6 +492,33 @@ User income sources.
   updated_at: timestamp
 }
 ```
+
+#### monthly_incomes
+Period-specific income tracking (allows different income per budget period).
+
+```typescript
+{
+  id: uuid (PK)
+  user_id: uuid (FK → profiles)
+  period: string (format: 'YYYY-MM')
+  name: string (e.g., "Lön", "Barnbidrag")
+  amount: number (decimal, >= 0)
+  created_at: timestamp
+  updated_at: timestamp
+}
+```
+
+**Unique constraint:** (user_id, period, name)
+
+**Key RPC Functions:**
+- `get_household_monthly_incomes(p_period)` - Get user + partner incomes for a period
+- `get_household_monthly_income_total(p_period)` - Get total income breakdown
+- `has_income_for_period(p_period)` - Check if user has income for period (for reminder popup)
+
+**Income Reminder Popup:**
+- Shows after salary day has passed if no income registered for current period
+- Options: "Add income", "Copy from previous month", "Remind later"
+- Dismissal stored in sessionStorage (per-session)
 
 #### budgets
 Monthly budget overview (period-based).
@@ -1473,7 +1503,11 @@ import { createClient } from '@/lib/supabase/server' // Server
 ['user']                        // Current user profile
 ['partner']                     // Partner profile
 ['categories']                  // All categories
-['incomes']                     // User incomes
+['incomes']                     // User incomes (static)
+['monthly-incomes', period]     // Period-specific incomes
+['household-monthly-incomes', period]  // User + partner incomes
+['monthly-income-total', period]       // Income totals for period
+['has-income-for-period', period]      // Income existence check
 ['expenses']                    // All expenses
 ['expenses', { period, ... }]   // Filtered expenses
 ['expenses', 'period', period]  // Period-specific
@@ -1541,16 +1575,17 @@ return useMutation({
 ## Project History
 
 **Version History:**
+- v0.1.2 (2026-01-25) - Monthly income feature with reminder popup
 - v0.1.1 (2026-01-21) - Security updates to Next.js
 - v0.1.0 (Initial) - Full budget/expense management system
 
-**Current Status:** MVP complete, Phase 3 features in progress
+**Current Status:** MVP complete, Monthly Income feature added, Phase 3 features in progress
 
 **See BUILD_PLAN.md for detailed feature roadmap (in Swedish)**
 
 ---
 
-**Last Updated:** 2026-01-22
+**Last Updated:** 2026-01-25
 
 **Maintainer:** Development Team
 

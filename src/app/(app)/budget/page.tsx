@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { BudgetListSkeleton } from '@/components/budget/budget-list-skeleton'
+import { IncomeOverviewCard } from '@/components/budget/income-overview-card'
 import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
 import { motion } from 'framer-motion'
@@ -83,6 +84,9 @@ export default function BudgetListPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Monthly Income Card */}
+      <IncomeOverviewCard period={currentPeriod.period} />
 
       {/* Budget List */}
       {(!budgets || budgets.length === 0) ? (

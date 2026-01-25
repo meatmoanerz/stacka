@@ -209,5 +209,50 @@
     "currentInvoice": "Current invoice",
     "nextInvoice": "Next invoice",
     "totalCCMExpenses": "Total credit card expenses"
+  },
+  "monthlyIncome": {
+    "title": "Monthly Income",
+    "subtitle": "Register your income for the period",
+    "addIncome": "Add income",
+    "manageIncomes": "Manage",
+    "noIncomes": "No income registered for this period",
+    "noIncomesRegistered": "No incomes registered",
+    "yourIncomes": "Your incomes",
+    "partnerIncomes": "{name}'s incomes",
+    "totalHouseholdIncome": "Total household income",
+    "yourShare": "Your share",
+    "partnerShare": "Partner",
+    "copyFromPrevious": "Copy from previous month",
+    "incomesCopied": "{count} incomes copied from previous month",
+    "noIncomesToCopy": "No incomes to copy from previous month",
+    "incomeType": "Income type",
+    "selectType": "Select income type",
+    "searchOrWrite": "Search or write your own...",
+    "amount": "Amount",
+    "period": "Period",
+    "incomeSaved": "Income saved",
+    "incomeUpdated": "Income updated",
+    "incomeDeleted": "deleted",
+    "couldNotSave": "Could not save income",
+    "couldNotUpdate": "Could not update income",
+    "couldNotDelete": "Could not delete income",
+    "couldNotCopy": "Could not copy incomes",
+    "types": {
+      "salary": "Salary",
+      "childBenefit": "Child benefit",
+      "studentAid": "Student aid",
+      "sickPay": "Sick pay",
+      "parentalBenefit": "Parental benefit",
+      "pension": "Pension",
+      "unemployment": "Unemployment benefit",
+      "other": "Other"
+    },
+    "reminder": {
+      "title": "Add monthly income",
+      "description": "You haven't registered income for {period} yet.",
+      "addNow": "Add income",
+      "sameAsPrevious": "Same as previous month",
+      "remindLater": "Remind me later"
+    }
   }
 }

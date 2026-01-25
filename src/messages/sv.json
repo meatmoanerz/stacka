@@ -245,6 +245,51 @@
     "currentInvoice": "Nuvarande faktura",
     "nextInvoice": "Nästa faktura",
     "totalCCMExpenses": "Totala kreditkortsutgifter"
+  },
+  "monthlyIncome": {
+    "title": "Månadens inkomst",
+    "subtitle": "Registrera dina inkomster för perioden",
+    "addIncome": "Lägg till inkomst",
+    "manageIncomes": "Hantera",
+    "noIncomes": "Ingen inkomst registrerad för denna period",
+    "noIncomesRegistered": "Inga inkomster registrerade",
+    "yourIncomes": "Dina inkomster",
+    "partnerIncomes": "{name}s inkomster",
+    "totalHouseholdIncome": "Total hushållsinkomst",
+    "yourShare": "Din del",
+    "partnerShare": "Partner",
+    "copyFromPrevious": "Kopiera från förra månaden",
+    "incomesCopied": "{count} inkomster kopierade från förra månaden",
+    "noIncomesToCopy": "Inga inkomster att kopiera från förra månaden",
+    "incomeType": "Typ av inkomst",
+    "selectType": "Välj typ av inkomst",
+    "searchOrWrite": "Sök eller skriv egen...",
+    "amount": "Belopp",
+    "period": "Period",
+    "incomeSaved": "Inkomst sparad",
+    "incomeUpdated": "Inkomst uppdaterad",
+    "incomeDeleted": "borttagen",
+    "couldNotSave": "Kunde inte spara inkomst",
+    "couldNotUpdate": "Kunde inte uppdatera inkomst",
+    "couldNotDelete": "Kunde inte ta bort inkomsten",
+    "couldNotCopy": "Kunde inte kopiera inkomster",
+    "types": {
+      "salary": "Lön",
+      "childBenefit": "Barnbidrag",
+      "studentAid": "Studiebidrag",
+      "sickPay": "Sjukpenning",
+      "parentalBenefit": "Föräldrapenning",
+      "pension": "Pension",
+      "unemployment": "A-kassa",
+      "other": "Övrigt"
+    },
+    "reminder": {
+      "title": "Lägg till månadens inkomst",
+      "description": "Du har inte registrerat inkomst för {period} ännu.",
+      "addNow": "Lägg till inkomst",
+      "sameAsPrevious": "Samma som förra månaden",
+      "remindLater": "Påminn mig senare"
+    }
   }
 }
 
