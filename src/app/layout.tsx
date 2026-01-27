@@ -18,6 +18,9 @@ export const metadata: Metadata = {
   title: "Stacka - Din personliga ekonomi",
   description: "Håll koll på din budget, utgifter och sparande med Stacka",
   manifest: "/manifest.json",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

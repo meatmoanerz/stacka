@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { toast } from 'sonner'
 import { Loader2, Mail } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -71,11 +72,17 @@ export default function LoginPage() {
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-stacka-olive text-white mb-4 shadow-lg"
+            className="flex items-center justify-center mb-4"
           >
-            <span className="text-2xl font-bold">S</span>
+            <Image
+              src="/logo-full.svg"
+              alt="Stacka"
+              width={240}
+              height={80}
+              priority
+              className="h-auto w-48"
+            />
           </motion.div>
-          <h1 className="text-3xl font-bold text-stacka-olive">Stacka</h1>
           <p className="text-muted-foreground mt-1">Din personliga ekonomi</p>
         </div>
 
@@ -184,4 +191,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
