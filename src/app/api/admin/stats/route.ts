@@ -100,8 +100,9 @@ export async function GET(request: Request) {
     ])
 
     // Calculate unique active users
+    const activeUserIds = activeUsersResult.data as { user_id: string }[] | null
     const uniqueActiveUsers = new Set(
-      activeUsersResult.data?.map((e) => e.user_id) || []
+      activeUserIds?.map((e) => e.user_id) || []
     ).size
 
     // Calculate average expenses per user
