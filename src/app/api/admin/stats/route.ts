@@ -118,7 +118,8 @@ export async function GET(request: Request) {
 
     // Aggregate daily activity for chart
     const dailyActivity: Record<string, { count: number; amount: number }> = {}
-    expensesByPeriodResult.data?.forEach((expense) => {
+    const expensesData = expensesByPeriodResult.data as { created_at: string; amount: number }[] | null
+    expensesData?.forEach((expense) => {
       const date = format(new Date(expense.created_at), 'yyyy-MM-dd')
       if (!dailyActivity[date]) {
         dailyActivity[date] = { count: 0, amount: 0 }
