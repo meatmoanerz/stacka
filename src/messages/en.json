@@ -199,7 +199,12 @@
     "createGroup": "Create group",
     "noLoans": "No loans registered",
     "totalDebt": "Total debt",
-    "interestHistory": "Interest history"
+    "interestHistory": "Interest history",
+    "sharing": {
+      "shareWith": "Share with {name}",
+      "shareDescription": "{name} can view and edit this loan",
+      "shared": "Shared"
+    }
   },
   "ccm": {
     "title": "Credit Card Manager",

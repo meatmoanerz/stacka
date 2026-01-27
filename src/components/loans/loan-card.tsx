@@ -24,13 +24,16 @@ import {
 import { useDeleteLoan, calculateLoanSummary } from '@/hooks/use-loans'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { Edit2, Trash2, TrendingDown, Percent, Calendar, ChevronRight } from 'lucide-react'
+import { Edit2, Trash2, TrendingDown, Percent, Calendar, ChevronRight, Users } from 'lucide-react'
 import type { LoanWithGroup } from '@/types'
 import { LoanForm } from './loan-form'
 import { AmortizationPlanDialog } from './amortization-plan'
 
 interface LoanCardProps {
-  loan: LoanWithGroup
+  loan: LoanWithGroup & {
+    is_partner_loan?: boolean
+    owner_name?: string
+  }
   index?: number
 }
 
@@ -80,7 +83,7 @@ export function LoanCard({ loan, index = 0 }: LoanCardProps) {
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   {loan.loan_group && (
                     <span
                       className="text-xs px-2 py-0.5 rounded-full"
@@ -90,6 +93,13 @@ export function LoanCard({ loan, index = 0 }: LoanCardProps) {
                       }}
                     >
                       {loan.loan_group.name}
+                    </span>
+                  )}
+                  {/* Shared indicator */}
+                  {(loan.is_shared || loan.is_partner_loan) && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-stacka-blue/20 text-stacka-blue flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {loan.is_partner_loan ? loan.owner_name : 'Delat'}
                     </span>
                   )}
                 </div>

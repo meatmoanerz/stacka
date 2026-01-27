@@ -235,6 +235,11 @@
     },
     "info": {
       "calculationNote": "Beräknat med nuvarande ränta och amortering. Faktisk avbetalning kan variera beroende på ränteändringar."
+    },
+    "sharing": {
+      "shareWith": "Dela med {name}",
+      "shareDescription": "{name} kan se och redigera detta lån",
+      "shared": "Delat"
     }
   },
   "ccm": {
