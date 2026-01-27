@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Landmark, Plus, TrendingDown, Percent, Wallet } from 'lucide-react'
-import { useLoans, useTotalDebt, useTotalMonthlyAmortization } from '@/hooks/use-loans'
+import { useAllLoans } from '@/hooks/use-loans'
 import { useLoanGroups } from '@/hooks/use-loan-groups'
 import { LoanForm, LoanCard } from '@/components/loans'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -22,10 +22,12 @@ export default function LoansSettingsPage() {
   const router = useRouter()
   const [addOpen, setAddOpen] = useState(false)
 
-  const { data: loans, isLoading } = useLoans()
+  const { data: loans, isLoading } = useAllLoans()
   const { data: loanGroups } = useLoanGroups()
-  const totalDebt = useTotalDebt()
-  const totalMonthlyAmortization = useTotalMonthlyAmortization()
+
+  // Calculate totals
+  const totalDebt = loans?.reduce((sum, loan) => sum + loan.current_balance, 0) ?? 0
+  const totalMonthlyAmortization = loans?.reduce((sum, loan) => sum + loan.monthly_amortization, 0) ?? 0
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('sv-SE', {

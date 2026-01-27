@@ -6,10 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useCreateLoan, useUpdateLoan } from '@/hooks/use-loans'
 import { useLoanGroups, useCreateLoanGroup, DEFAULT_LOAN_GROUPS, LOAN_GROUP_COLORS } from '@/hooks/use-loan-groups'
+import { usePartner } from '@/hooks/use-user'
 import { toast } from 'sonner'
-import { Loader2, ChevronDown, Check, Landmark, Plus, Percent } from 'lucide-react'
+import { Loader2, ChevronDown, Check, Landmark, Plus, Percent, Users } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { LoanGroup, LoanWithGroup } from '@/types'
 
@@ -20,6 +22,7 @@ const loanSchema = z.object({
   interest_rate: z.number().min(0, 'Ränta kan inte vara negativ').max(100, 'Ränta kan inte vara över 100%'),
   monthly_amortization: z.number().min(0, 'Amortering kan inte vara negativ'),
   group_id: z.string().uuid().nullable().optional(),
+  is_shared: z.boolean().optional(),
 })
 
 type LoanFormData = z.infer<typeof loanSchema>
@@ -31,11 +34,13 @@ interface LoanFormProps {
 
 export function LoanForm({ loan, onSuccess }: LoanFormProps) {
   const { data: loanGroups, isLoading: groupsLoading } = useLoanGroups()
+  const { data: partner } = usePartner()
   const createLoan = useCreateLoan()
   const updateLoan = useUpdateLoan()
   const createGroup = useCreateLoanGroup()
 
   const isEditing = !!loan
+  const hasPartner = !!partner
 
   const [amountDisplay, setAmountDisplay] = useState(loan ? loan.original_amount.toString() : '')
   const [balanceDisplay, setBalanceDisplay] = useState(loan ? loan.current_balance.toString() : '')
@@ -57,6 +62,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
       interest_rate: loan?.interest_rate || 0,
       monthly_amortization: loan?.monthly_amortization || 0,
       group_id: loan?.group_id || null,
+      is_shared: loan?.is_shared || false,
     },
   })
 
@@ -180,6 +186,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
           interest_rate: 0,
           monthly_amortization: 0,
           group_id: null,
+          is_shared: false,
         })
       }
 
@@ -425,6 +432,27 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr/mån</span>
         </div>
       </div>
+
+      {/* Share with Partner */}
+      {hasPartner && (
+        <div className="flex items-center justify-between p-4 rounded-xl bg-stacka-sage/10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-stacka-blue/20 flex items-center justify-center">
+              <Users className="w-5 h-5 text-stacka-blue" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">Dela med {partner?.first_name || 'partner'}</p>
+              <p className="text-xs text-muted-foreground">
+                {partner?.first_name || 'Din partner'} kan se och redigera detta lån
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={form.watch('is_shared') || false}
+            onCheckedChange={(checked) => form.setValue('is_shared', checked)}
+          />
+        </div>
+      )}
 
       {/* Submit */}
       <Button

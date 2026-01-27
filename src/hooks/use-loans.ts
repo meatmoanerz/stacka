@@ -5,7 +5,13 @@ import { createClient } from '@/lib/supabase/client'
 import type { Loan, LoanWithGroup, LoanInterestHistory } from '@/types'
 import type { InsertTables, UpdateTables } from '@/types/database'
 
-// Fetch all loans with their groups
+// Extended type for loans with owner information
+export interface LoanWithOwner extends LoanWithGroup {
+  is_partner_loan?: boolean
+  owner_name?: string
+}
+
+// Fetch all loans with their groups (own loans only)
 export function useLoans() {
   const supabase = createClient()
 
@@ -24,6 +30,59 @@ export function useLoans() {
       return data as LoanWithGroup[]
     },
   })
+}
+
+// Fetch partner's shared loans
+export function usePartnerLoans() {
+  return useQuery({
+    queryKey: ['partner-loans'],
+    queryFn: async () => {
+      const response = await fetch('/api/partner-loans')
+      const data = await response.json()
+
+      if (data.error) {
+        console.error('usePartnerLoans: API error:', data.error)
+        return { loans: [], partnerId: null, partnerName: null }
+      }
+
+      return {
+        loans: data.loans as LoanWithGroup[],
+        partnerId: data.partnerId as string | null,
+        partnerName: data.partnerName as string | null
+      }
+    },
+    staleTime: 30 * 1000,
+  })
+}
+
+// Fetch all loans including partner's shared loans
+export function useAllLoans() {
+  const { data: ownLoans, isLoading: ownLoading } = useLoans()
+  const { data: partnerData, isLoading: partnerLoading } = usePartnerLoans()
+
+  const isLoading = ownLoading || partnerLoading
+
+  // Combine own loans and partner's shared loans
+  const allLoans: LoanWithOwner[] = [
+    ...(ownLoans || []).map(loan => ({
+      ...loan,
+      is_partner_loan: false,
+      owner_name: undefined
+    })),
+    ...(partnerData?.loans || []).map(loan => ({
+      ...loan,
+      is_partner_loan: true,
+      owner_name: partnerData?.partnerName || 'Partner'
+    }))
+  ]
+
+  return {
+    data: allLoans,
+    isLoading,
+    ownLoans: ownLoans || [],
+    partnerLoans: partnerData?.loans || [],
+    partnerName: partnerData?.partnerName || null
+  }
 }
 
 // Fetch a single loan by ID
@@ -91,6 +150,7 @@ export function useCreateLoan() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] })
       queryClient.invalidateQueries({ queryKey: ['loan-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['partner-loans'] })
     },
   })
 }
@@ -118,6 +178,7 @@ export function useUpdateLoan() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['loans'] })
       queryClient.invalidateQueries({ queryKey: ['loans', data.id] })
+      queryClient.invalidateQueries({ queryKey: ['partner-loans'] })
     },
   })
 }
@@ -139,6 +200,7 @@ export function useDeleteLoan() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loans'] })
       queryClient.invalidateQueries({ queryKey: ['loan-groups'] })
+      queryClient.invalidateQueries({ queryKey: ['partner-loans'] })
     },
   })
 }
