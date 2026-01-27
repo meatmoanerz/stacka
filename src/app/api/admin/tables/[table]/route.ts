@@ -58,13 +58,13 @@ export async function GET(
     const offset = (page - 1) * limit
 
     // Get total count
-    const { count } = await supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { count } = await (supabase.from(table) as any)
       .select('*', { count: 'exact', head: true })
 
     // Get rows with pagination
-    let query = supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = (supabase.from(table) as any)
       .select('*')
       .range(offset, offset + limit - 1)
       .order(sortBy, { ascending: sortOrder })
@@ -137,8 +137,8 @@ export async function PATCH(
     }
 
     const supabase = createServiceClient()
-    const { data, error } = await supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from(table) as any)
       .update(updates)
       .eq('id', id)
       .select()
@@ -183,8 +183,8 @@ export async function DELETE(
     }
 
     const supabase = createServiceClient()
-    const { error } = await supabase
-      .from(table)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from(table) as any)
       .delete()
       .eq('id', id)
 
