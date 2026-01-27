@@ -622,6 +622,7 @@ export type Database = {
           file_type: string
           bank_name: string | null
           transaction_count: number
+          invoice_total: number | null
           status: 'processing' | 'completed' | 'failed'
           created_at: string
         }
@@ -632,6 +633,7 @@ export type Database = {
           file_type: string
           bank_name?: string | null
           transaction_count?: number
+          invoice_total?: number | null
           status?: 'processing' | 'completed' | 'failed'
           created_at?: string
         }
@@ -642,6 +644,7 @@ export type Database = {
           file_type?: string
           bank_name?: string | null
           transaction_count?: number
+          invoice_total?: number | null
           status?: 'processing' | 'completed' | 'failed'
           created_at?: string
         }
@@ -653,6 +656,8 @@ export type Database = {
           date: string
           description: string
           amount: number
+          cardholder: string | null
+          cost_assignment: 'shared' | 'personal' | 'partner'
           suggested_category_id: string | null
           confirmed_category_id: string | null
           is_expense: boolean
@@ -666,6 +671,8 @@ export type Database = {
           date: string
           description: string
           amount: number
+          cardholder?: string | null
+          cost_assignment?: 'shared' | 'personal' | 'partner'
           suggested_category_id?: string | null
           confirmed_category_id?: string | null
           is_expense?: boolean
@@ -679,6 +686,8 @@ export type Database = {
           date?: string
           description?: string
           amount?: number
+          cardholder?: string | null
+          cost_assignment?: 'shared' | 'personal' | 'partner'
           suggested_category_id?: string | null
           confirmed_category_id?: string | null
           is_expense?: boolean

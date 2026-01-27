@@ -145,4 +145,3 @@ export function getNextPeriods(salaryDay: number, count: number = 6): BudgetPeri
   
   return periods
 }
-

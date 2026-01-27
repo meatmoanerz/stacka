@@ -16,6 +16,7 @@ interface ParsedTransaction {
   date: string
   description: string
   amount: number
+  cardholder?: string
   reference?: string
 }
 
@@ -54,12 +55,15 @@ export async function POST(request: Request) {
     let completion
 
     if (isPdf) {
-      // For PDF files, convert to base64 and use GPT-4o vision
+      // Use OpenAI's native PDF support (available since March 2025)
+      // This handles both text-based and scanned PDFs via vision capabilities
       const arrayBuffer = await file.arrayBuffer()
       const base64 = Buffer.from(arrayBuffer).toString('base64')
 
       console.log(`Processing PDF: ${file.name}, size: ${arrayBuffer.byteLength} bytes`)
 
+      // OpenAI extracts text and images from each page automatically
+      // Using gpt-4o for better PDF analysis (vision capabilities required)
       completion = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
@@ -72,21 +76,23 @@ export async function POST(request: Request) {
             content: [
               {
                 type: 'text',
-                text: 'Analysera detta kontoutdrag och extrahera alla transaktioner enligt instruktionerna.'
+                text: 'Analysera detta kontoutdrag och extrahera alla transaktioner enligt instruktionerna. Returnera svaret som JSON.'
               },
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:application/pdf;base64,${base64}`,
-                  detail: 'high'
+                type: 'file',
+                file: {
+                  filename: file.name,
+                  file_data: `data:application/pdf;base64,${base64}`
                 }
               }
             ]
           }
         ],
         response_format: { type: 'json_object' },
-        max_tokens: 4096
+        max_tokens: 8192
       })
+
+      console.log('OpenAI PDF analysis completed')
     } else {
       // For CSV files, send as text
       const fileContent = await file.text()
@@ -108,17 +114,43 @@ export async function POST(request: Request) {
       })
     }
 
-    const result = JSON.parse(completion.choices[0].message.content || '{}')
+    const rawContent = completion.choices[0].message.content || '{}'
+    console.log('OpenAI raw response length:', rawContent.length)
+
+    const result = JSON.parse(rawContent)
     const transactions: ParsedTransaction[] = result.transactions || []
+    const invoiceTotal: number | null = result.invoice_total ?? null
 
-    console.log(`Transactions found: ${transactions.length}`)
+    // Sort transactions by date (ascending - oldest first)
+    const sortedTransactions = [...transactions].sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
 
-    if (transactions.length > 0) {
-      const transactionRows = transactions.map((t) => ({
+    // Calculate sum for verification
+    const calculatedSum = sortedTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0)
+
+    console.log(`Transactions found: ${sortedTransactions.length}`)
+    console.log(`Invoice total from PDF: ${invoiceTotal}`)
+    console.log(`Calculated sum: ${calculatedSum.toFixed(2)}`)
+    if (invoiceTotal) {
+      const diff = Math.abs(invoiceTotal - calculatedSum)
+      console.log(`Difference: ${diff.toFixed(2)} (${diff < 1 ? '✓ OK' : '⚠ MISMATCH'})`)
+    }
+
+    // Log first 5 transactions for debugging
+    console.log('First 5 transactions:')
+    sortedTransactions.slice(0, 5).forEach((t, i) => {
+      console.log(`  ${i + 1}. ${t.date} | ${t.description} | ${t.amount} | ${t.cardholder?.split(' ')[0]}`)
+    })
+
+    if (sortedTransactions.length > 0) {
+      const transactionRows = sortedTransactions.map((t) => ({
         analysis_id: analysis.id,
         date: t.date,
         description: t.description,
         amount: Math.abs(t.amount),
+        cardholder: t.cardholder || null,
+        cost_assignment: 'shared' as const,
         is_expense: t.amount > 0,
         is_saved: false,
         suggested_category_id: null,
@@ -133,20 +165,26 @@ export async function POST(request: Request) {
         .from('statement_analyses')
         .update({
           status: 'completed',
-          transaction_count: transactions.length
+          transaction_count: sortedTransactions.length,
+          invoice_total: invoiceTotal
         })
         .eq('id', analysis.id)
     } else {
       await supabaseAdmin
         .from('statement_analyses')
-        .update({ status: 'completed' })
+        .update({
+          status: 'completed',
+          invoice_total: invoiceTotal
+        })
         .eq('id', analysis.id)
     }
 
     return NextResponse.json({
       success: true,
       analysisId: analysis.id,
-      transactionCount: transactions.length
+      transactionCount: sortedTransactions.length,
+      invoiceTotal,
+      calculatedSum: parseFloat(calculatedSum.toFixed(2))
     })
 
   } catch (error) {

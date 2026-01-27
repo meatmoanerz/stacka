@@ -308,22 +308,24 @@
 
 ---
 
-### 3.4 Statement Analyzer (AI)
-- [ ] **Upload & Parsing**
-  - [ ] Upload bankutdrag (PDF/CSV)
-  - [ ] AI-parsing av transaktioner
-  - [ ] Automatisk kategorisering
-  - [ ] Förhandsgranskning
+### 3.4 Statement Analyzer (AI) 🔄 PÅGÅENDE
+- [x] **Upload & Parsing**
+  - [x] Upload bankutdrag (PDF/CSV)
+  - [x] AI-parsing av transaktioner (OpenAI Vision)
+  - [x] Automatisk kategorisering (förslag)
+  - [x] Förhandsgranskning
 
-- [ ] **Import Process**
-  - [ ] Granska importerade transaktioner
-  - [ ] Justera kategorier
-  - [ ] Bekräfta och importera till expenses
+- [x] **Import Process**
+  - [x] Granska importerade transaktioner
+  - [x] Justera kategorier (individuellt + bulk)
+  - [x] Bekräfta och importera till expenses
+  - [x] Cost assignment (personal/shared/partner)
+  - [x] Bulk-kategorisering (välj flera + tilldela kategori)
   - [ ] Hantera dubbletter
 
 **Dependencies:** Expenses, Categories, OpenAI API
 
-**Notera:** Detta är en avancerad funktion som kan komma efter MVP
+**Notera:** Grundfunktionaliteten är klar. Förbättringar kan läggas till löpande.
 
 ---
 
@@ -535,12 +537,12 @@
 - [x] Budget UX (komplett: split, inkomst, föregående månad, kopiera, standardvärden)
 
 ### Fas 3: Avancerade Funktioner
-**Status:** 🟢 ~75% klar
+**Status:** 🟢 ~95% klar
 
 - [x] Sparande-mål ✅ KLART (UI, formulär, progress, arkivering)
 - [x] Lån ✅ KLART
 - [x] CCM ✅ KLART (inställningar, fakturaperioder, kreditkortsflik)
-- [ ] Statement Analyzer
+- [x] Statement Analyzer ✅ KLART (upload, AI-parsing, bulk-kategorisering, import)
 
 ### Fas 4: Polering & UX
 **Status:** 🟢 ~75% klar
@@ -628,9 +630,18 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-01-22
+**Senast uppdaterad:** 2026-01-28
 
-### Senaste ändringar (2026-01-22):
+### Senaste ändringar (2026-01-28):
+- ✅ **Statement Analyzer - Bulk-kategorisering:**
+  - Ny `useBulkUpdateTransactionCategories` hook för att uppdatera flera transaktioner samtidigt
+  - Kryssrutor alltid aktiverade (behöver inte längre välja kategori först)
+  - Bulk-panel i botten med kategori-dropdown och "Tilldela"-knapp
+  - Visuell indikator ("Saknar kategori") för transaktioner utan kategori
+  - "Spara som utgifter"-knapp aktiveras endast när alla markerade har kategori
+  - Förenklat flöde: Markera → Välj kategori → Tilldela → Spara
+
+### Tidigare ändringar (2026-01-22):
 - ✅ **Error Handling & Stability - komplett implementation:**
   - Error boundaries för hela appen (ErrorBoundary, PageErrorFallback, ComponentErrorBoundary)
   - App layout wrappas med error boundary för att fånga rendering-fel

@@ -3,24 +3,22 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useUser } from '@/hooks/use-user'
-import { useAnalyzeStatement } from '@/hooks/use-statement-analyzer'
 import { getAllBanks } from '@/lib/statement/bank-configs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Upload, FileText, Loader2 } from 'lucide-react'
+import { Upload, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils/cn'
 
 interface Props {
-  onSuccess: (analysisId: string) => void
+  onAnalyze: (file: File, bankId: string, userId: string) => void
 }
 
-export function StatementUploadForm({ onSuccess }: Props) {
+export function StatementUploadForm({ onAnalyze }: Props) {
   const { data: user } = useUser()
   const [selectedBank, setSelectedBank] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
-  const analyzeStatement = useAnalyzeStatement()
   const banks = getAllBanks()
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -38,24 +36,13 @@ export function StatementUploadForm({ onSuccess }: Props) {
     maxFiles: 1,
   })
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!file || !selectedBank || !user?.id) {
       toast.error('Välj bank och fil')
       return
     }
 
-    try {
-      const result = await analyzeStatement.mutateAsync({
-        file,
-        bankId: selectedBank,
-        userId: user.id,
-      })
-
-      toast.success(`${result.transactionCount} transaktioner hittades!`)
-      onSuccess(result.analysisId)
-    } catch (error) {
-      toast.error('Kunde inte analysera filen')
-    }
+    onAnalyze(file, selectedBank, user.id)
   }
 
   return (
@@ -111,17 +98,10 @@ export function StatementUploadForm({ onSuccess }: Props) {
 
         <Button
           onClick={handleSubmit}
-          disabled={!file || !selectedBank || analyzeStatement.isPending}
-          className="w-full"
+          disabled={!file || !selectedBank}
+          className="w-full bg-stacka-olive hover:bg-stacka-olive/90"
         >
-          {analyzeStatement.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Analyserar...
-            </>
-          ) : (
-            'Analysera kontoutdrag'
-          )}
+          Analysera kontoutdrag
         </Button>
       </CardContent>
     </Card>
