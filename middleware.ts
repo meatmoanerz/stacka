@@ -1,7 +1,15 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { handleAdminRoute } from '@/lib/admin/middleware'
 
 export async function middleware(request: NextRequest) {
+  // Handle admin routes separately
+  const adminResponse = handleAdminRoute(request)
+  if (adminResponse) {
+    return adminResponse
+  }
+
+  // Handle regular app routes with Supabase auth
   return await updateSession(request)
 }
 
