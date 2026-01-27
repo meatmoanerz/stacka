@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useStatementTransactions, useUpdateTransactionCategory, useImportTransactions, type StatementTransactionWithCategory } from '@/hooks/use-statement-analyzer'
+import { useStatementTransactions, useUpdateTransactionCategory, useUpdateTransactionCostAssignment, useImportTransactions, type StatementTransactionWithCategory } from '@/hooks/use-statement-analyzer'
 import { useCategories } from '@/hooks/use-categories'
 import { useUser } from '@/hooks/use-user'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,9 +11,15 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
-import { Loader2, Check } from 'lucide-react'
+import { Loader2, Check, User, Users, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils/cn'
+
+const COST_ASSIGNMENT_OPTIONS = [
+  { value: 'personal', label: 'Personlig', icon: User },
+  { value: 'shared', label: 'Delad', icon: Users },
+  { value: 'partner', label: 'Partner', icon: UserCheck },
+] as const
 
 interface Props {
   analysisId: string
@@ -24,6 +30,7 @@ export function TransactionReviewList({ analysisId }: Props) {
   const { data: transactions, isLoading } = useStatementTransactions(analysisId)
   const { data: categories } = useCategories()
   const updateCategory = useUpdateTransactionCategory()
+  const updateCostAssignment = useUpdateTransactionCostAssignment()
   const importTransactions = useImportTransactions()
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -101,55 +108,105 @@ export function TransactionReviewList({ analysisId }: Props) {
 
       <Card>
         <CardContent className="p-0 divide-y">
-          {pendingTransactions.map(transaction => (
-            <div
-              key={transaction.id}
-              className={cn(
-                "p-4 flex items-center gap-4",
-                selectedIds.has(transaction.id) && "bg-stacka-sage/10"
-              )}
-            >
-              <Checkbox
-                checked={selectedIds.has(transaction.id)}
-                onCheckedChange={() => toggleSelect(transaction.id)}
-                disabled={!transaction.confirmed_category_id}
-              />
+          {pendingTransactions.map(transaction => {
+            const costOption = COST_ASSIGNMENT_OPTIONS.find(
+              o => o.value === (transaction.cost_assignment || 'shared')
+            )
+            const CostIcon = costOption?.icon || Users
 
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{transaction.description}</p>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(transaction.date), 'd MMM yyyy', { locale: sv })}
-                </p>
-              </div>
+            return (
+              <div
+                key={transaction.id}
+                className={cn(
+                  "p-4",
+                  selectedIds.has(transaction.id) && "bg-stacka-sage/10"
+                )}
+              >
+                {/* Top row: checkbox, description, amount */}
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedIds.has(transaction.id)}
+                    onCheckedChange={() => toggleSelect(transaction.id)}
+                    disabled={!transaction.confirmed_category_id}
+                    className="mt-1"
+                  />
 
-              <div className="w-48">
-                <Select
-                  value={transaction.confirmed_category_id || ''}
-                  onValueChange={(value) => {
-                    updateCategory.mutate({
-                      transactionId: transaction.id,
-                      categoryId: value
-                    })
-                  }}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="Välj kategori..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium leading-tight">{transaction.description}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                      <span>{format(new Date(transaction.date), 'd MMM yyyy', { locale: sv })}</span>
+                      {transaction.cardholder && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {transaction.cardholder.split(' ')[0]}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="w-24 text-right font-medium">
-                {formatCurrency(transaction.amount)}
+                  <div className="text-right font-semibold tabular-nums">
+                    {formatCurrency(transaction.amount)}
+                  </div>
+                </div>
+
+                {/* Bottom row: cost assignment & category selects */}
+                <div className="flex items-center gap-2 mt-3 ml-7">
+                  <Select
+                    value={transaction.cost_assignment || 'shared'}
+                    onValueChange={(value: 'personal' | 'shared' | 'partner') => {
+                      updateCostAssignment.mutate({
+                        transactionId: transaction.id,
+                        costAssignment: value
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-32">
+                      <SelectValue>
+                        <span className="flex items-center gap-2">
+                          <CostIcon className="w-3.5 h-3.5" />
+                          {costOption?.label}
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COST_ASSIGNMENT_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <span className="flex items-center gap-2">
+                            <option.icon className="w-4 h-4" />
+                            {option.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={transaction.confirmed_category_id || ''}
+                    onValueChange={(value) => {
+                      updateCategory.mutate({
+                        transactionId: transaction.id,
+                        categoryId: value
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="h-8 flex-1">
+                      <SelectValue placeholder="Välj kategori..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </CardContent>
       </Card>
 

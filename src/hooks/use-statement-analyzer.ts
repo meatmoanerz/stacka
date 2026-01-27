@@ -28,6 +28,25 @@ export function useStatementAnalyses() {
   })
 }
 
+export function useStatementAnalysis(analysisId: string) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: ['statement-analysis', analysisId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('statement_analyses')
+        .select('*')
+        .eq('id', analysisId)
+        .single()
+
+      if (error) throw error
+      return data as StatementAnalysis
+    },
+    enabled: !!analysisId
+  })
+}
+
 export function useStatementTransactions(analysisId: string) {
   const supabase = createClient()
 
@@ -41,7 +60,7 @@ export function useStatementTransactions(analysisId: string) {
           confirmed_category:categories!confirmed_category_id(*)
         `)
         .eq('analysis_id', analysisId)
-        .order('date', { ascending: false })
+        .order('date', { ascending: true })
 
       if (error) throw error
       return data as StatementTransactionWithCategory[]
@@ -68,16 +87,32 @@ export function useAnalyzeStatement() {
       formData.append('bankId', bankId)
       formData.append('userId', userId)
 
-      const response = await fetch('/api/statement/analyze', {
-        method: 'POST',
-        body: formData,
-      })
+      // Add timeout handling (3 minutes for PDF processing with OpenAI)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 180000)
 
-      if (!response.ok) {
-        throw new Error('Failed to analyze statement')
+      try {
+        const response = await fetch('/api/statement/analyze', {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.details || errorData.error || 'Failed to analyze statement')
+        }
+
+        return response.json()
+      } catch (error) {
+        clearTimeout(timeoutId)
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Analysen tog för lång tid. Försök igen med en mindre fil.')
+        }
+        throw error
       }
-
-      return response.json()
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['statement-analyses'] })
@@ -110,6 +145,107 @@ export function useUpdateTransactionCategory() {
   })
 }
 
+export function useBulkUpdateTransactionCategories() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      transactionIds,
+      categoryId
+    }: {
+      transactionIds: string[]
+      categoryId: string
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('statement_transactions') as any)
+        .update({ confirmed_category_id: categoryId })
+        .in('id', transactionIds)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statement-transactions'] })
+    }
+  })
+}
+
+export function useUpdateTransactionCostAssignment() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      transactionId,
+      costAssignment
+    }: {
+      transactionId: string
+      costAssignment: 'personal' | 'shared' | 'partner'
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('statement_transactions') as any)
+        .update({ cost_assignment: costAssignment })
+        .eq('id', transactionId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statement-transactions'] })
+    }
+  })
+}
+
+export function useUpdateTransactionAmount() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      transactionId,
+      amount
+    }: {
+      transactionId: string
+      amount: number
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('statement_transactions') as any)
+        .update({ amount })
+        .eq('id', transactionId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statement-transactions'] })
+    }
+  })
+}
+
+export function useUpdateAnalysisInvoiceTotal() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      analysisId,
+      invoiceTotal
+    }: {
+      analysisId: string
+      invoiceTotal: number
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('statement_analyses') as any)
+        .update({ invoice_total: invoiceTotal })
+        .eq('id', analysisId)
+
+      if (error) throw error
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['statement-analysis', variables.analysisId] })
+      queryClient.invalidateQueries({ queryKey: ['statement-analyses'] })
+    }
+  })
+}
+
 export function useImportTransactions() {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -136,7 +272,7 @@ export function useImportTransactions() {
         amount: t.amount,
         description: t.description,
         date: t.date,
-        cost_assignment: 'personal' as const,
+        cost_assignment: t.cost_assignment || 'shared',
         is_ccm: false,
         is_recurring: false,
       }))

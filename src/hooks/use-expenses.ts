@@ -409,4 +409,3 @@ export function groupExpensesByInvoicePeriod(
 
   return sortedMap
 }
-
