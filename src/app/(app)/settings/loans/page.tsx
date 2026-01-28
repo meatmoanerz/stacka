@@ -11,19 +11,33 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Landmark, Plus, TrendingDown, Percent, Wallet } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Landmark, Plus, TrendingDown, Percent, Wallet, ChevronDown } from 'lucide-react'
 import { useAllLoans } from '@/hooks/use-loans'
 import { useLoanGroups } from '@/hooks/use-loan-groups'
 import { LoanForm, LoanCard } from '@/components/loans'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils/cn'
 
 export default function LoansSettingsPage() {
   const router = useRouter()
   const [addOpen, setAddOpen] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   const { data: loans, isLoading } = useAllLoans()
   const { data: loanGroups } = useLoanGroups()
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
 
   // Calculate totals
   const totalDebt = loans?.reduce((sum, loan) => sum + loan.current_balance, 0) ?? 0
@@ -152,47 +166,123 @@ export default function LoansSettingsPage() {
           transition={{ delay: 0.2 }}
           className="space-y-6"
         >
-          {/* Grouped by loan type */}
+          {/* Grouped by loan type - Collapsible */}
           {groupedLoans && loanGroups?.map(group => {
             const groupLoans = groupedLoans[group.id]
             if (!groupLoans || groupLoans.length === 0) return null
 
+            const isExpanded = expandedGroups.has(group.id)
             const groupTotal = groupLoans.reduce((sum, loan) => sum + loan.current_balance, 0)
+            const groupAmortization = groupLoans.reduce((sum, loan) => sum + loan.monthly_amortization, 0)
+            const groupAvgRate = groupLoans.reduce((sum, loan) => sum + (loan.current_balance * loan.interest_rate), 0) / groupTotal
 
             return (
-              <div key={group.id} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+              <Card key={group.id} className="border-0 shadow-sm overflow-hidden">
+                {/* Collapsible Header */}
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: group.color }}
                     />
-                    <h2 className="font-semibold text-stacka-olive">{group.name}</h2>
+                    <div className="text-left">
+                      <h2 className="font-semibold text-stacka-olive">{group.name}</h2>
+                      <p className="text-xs text-muted-foreground">
+                        {groupLoans.length} lån • {formatCurrency(groupAmortization)}/mån • {groupAvgRate.toFixed(2)}% snittränta
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {formatCurrency(groupTotal)}
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  {groupLoans.map((loan, index) => (
-                    <LoanCard key={loan.id} loan={loan} index={index} />
-                  ))}
-                </div>
-              </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-stacka-olive">
+                      {formatCurrency(groupTotal)}
+                    </span>
+                    <ChevronDown className={cn(
+                      "w-5 h-5 text-muted-foreground transition-transform",
+                      isExpanded && "rotate-180"
+                    )} />
+                  </div>
+                </button>
+
+                {/* Expanded Content */}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 pt-0 space-y-3">
+                        {groupLoans.map((loan, index) => (
+                          <LoanCard key={loan.id} loan={loan} index={index} />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
             )
           })}
 
-          {/* Ungrouped loans */}
-          {groupedLoans?.['ungrouped'] && groupedLoans['ungrouped'].length > 0 && (
-            <div className="space-y-3">
-              <h2 className="font-semibold text-muted-foreground">Övriga</h2>
-              <div className="space-y-3">
-                {groupedLoans['ungrouped'].map((loan, index) => (
-                  <LoanCard key={loan.id} loan={loan} index={index} />
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Ungrouped loans - Collapsible */}
+          {groupedLoans?.['ungrouped'] && groupedLoans['ungrouped'].length > 0 && (() => {
+            const ungroupedLoans = groupedLoans['ungrouped']
+            const isExpanded = expandedGroups.has('ungrouped')
+            const groupTotal = ungroupedLoans.reduce((sum, loan) => sum + loan.current_balance, 0)
+            const groupAmortization = ungroupedLoans.reduce((sum, loan) => sum + loan.monthly_amortization, 0)
+
+            return (
+              <Card className="border-0 shadow-sm overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup('ungrouped')}
+                  className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-muted-foreground/30" />
+                    <div className="text-left">
+                      <h2 className="font-semibold text-muted-foreground">Ej kategoriserade</h2>
+                      <p className="text-xs text-muted-foreground">
+                        {ungroupedLoans.length} lån • {formatCurrency(groupAmortization)}/mån
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold">
+                      {formatCurrency(groupTotal)}
+                    </span>
+                    <ChevronDown className={cn(
+                      "w-5 h-5 text-muted-foreground transition-transform",
+                      isExpanded && "rotate-180"
+                    )} />
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 pt-0 space-y-3">
+                        {ungroupedLoans.map((loan, index) => (
+                          <LoanCard key={loan.id} loan={loan} index={index} />
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </Card>
+            )
+          })()}
         </motion.div>
       ) : (
         /* Empty State */

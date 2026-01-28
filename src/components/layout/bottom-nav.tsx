@@ -129,7 +129,7 @@ export function BottomNav({ className }: BottomNavProps) {
   return (
     <nav
       className={cn(
-        "fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-lg border-t border-border",
+        "fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-lg border-t border-border keyboard-hide",
         className
       )}
       aria-label="Mobilnavigation"

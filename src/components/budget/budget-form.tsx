@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { useCategoriesByType } from '@/hooks/use-categories'
 import { useHouseholdIncomeDetails } from '@/hooks/use-incomes'
+import { useHouseholdMonthlyIncomes } from '@/hooks/use-monthly-incomes'
 import { useCreateBudget, useUpdateBudget, useDeleteBudget, usePreviousBudget, useBudgetByPeriod } from '@/hooks/use-budgets'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
@@ -78,6 +79,8 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
   const { data: partner } = usePartner()
   const { data: householdData, isLoading: incomesLoading } = useHouseholdIncomeDetails()
   const { fixed, variable, savings, isLoading: categoriesLoading } = useCategoriesByType()
+
+  // Get monthly incomes for the selected period (preferred over static incomes)
   const createBudget = useCreateBudget()
   const updateBudget = useUpdateBudget()
   const deleteBudget = useDeleteBudget()
@@ -107,6 +110,9 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
   const [showCopyConfirm, setShowCopyConfirm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const { data: previousBudget, isLoading: previousBudgetLoading } = usePreviousBudget(period)
+
+  // Monthly incomes for the selected period (preferred over static incomes)
+  const { data: monthlyIncomes, isLoading: monthlyIncomesLoading } = useHouseholdMonthlyIncomes(period)
   
   // Check if selected period already has a saved budget (only relevant in /new)
   const { data: existingPeriodBudget, isLoading: checkingExistingBudget } = useBudgetByPeriod(
@@ -368,32 +374,49 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
   }, [period, periodChanged, initialized, existingBudget, fixed, variable, savings, getDraftKey, householdData])
 
   // Initialize incomes from database
+  // Prefer monthly incomes for the period if they exist, otherwise fall back to static incomes
   useEffect(() => {
-    if (incomesInitialized || incomesLoading || !householdData) return
+    if (incomesInitialized || incomesLoading || monthlyIncomesLoading || !householdData) return
 
     const allIncomes: IncomeState[] = []
-    
-    householdData.userIncomes.forEach(inc => {
-      allIncomes.push({
-        id: inc.id,
-        name: inc.name,
-        amount: inc.amount,
-        isUser: true,
+
+    // Check if we have monthly incomes for this period
+    const hasMonthlyIncomes = monthlyIncomes && monthlyIncomes.length > 0
+
+    if (hasMonthlyIncomes) {
+      // Use monthly incomes (preferred for budget accuracy)
+      monthlyIncomes.forEach(inc => {
+        allIncomes.push({
+          id: inc.id,
+          name: inc.name,
+          amount: inc.amount,
+          isUser: inc.is_own,
+        })
       })
-    })
-    
-    householdData.partnerIncomes.forEach(inc => {
-      allIncomes.push({
-        id: inc.id,
-        name: inc.name,
-        amount: inc.amount,
-        isUser: false,
+    } else {
+      // Fall back to static incomes if no monthly incomes exist
+      householdData.userIncomes.forEach(inc => {
+        allIncomes.push({
+          id: inc.id,
+          name: inc.name,
+          amount: inc.amount,
+          isUser: true,
+        })
       })
-    })
+
+      householdData.partnerIncomes.forEach(inc => {
+        allIncomes.push({
+          id: inc.id,
+          name: inc.name,
+          amount: inc.amount,
+          isUser: false,
+        })
+      })
+    }
 
     setIncomes(allIncomes)
     setIncomesInitialized(true)
-  }, [householdData, incomesLoading, incomesInitialized])
+  }, [householdData, incomesLoading, incomesInitialized, monthlyIncomes, monthlyIncomesLoading])
 
   // Initialize budget items from existing budget, draft, or category defaults
   useEffect(() => {
@@ -523,7 +546,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
     [savings, budgetItems]
   )
 
-  // Calculate per-partner totals
+  // Calculate per-partner totals (excluding CCM expenses since they're paid next month)
   const { userExpenses, partnerExpenses, userSavings, partnerSavings } = useMemo(() => {
     let userExp = 0
     let partnerExp = 0
@@ -534,12 +557,15 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
       categories.forEach(cat => {
         const item = budgetItems[cat.id]
         if (!item) return
-        
+
+        // Skip CCM items for expense calculations (they're paid next month)
+        if (!isSavings && item.is_ccm) return
+
         // Use explicit amounts if they exist, otherwise divide 50/50
         const hasExplicitAmounts = item.userAmount !== undefined && item.partnerAmount !== undefined
         const userAmt = hasExplicitAmounts ? item.userAmount! : item.total / 2
         const partnerAmt = hasExplicitAmounts ? item.partnerAmount! : item.total / 2
-        
+
         if (isSavings) {
           userSav += userAmt
           partnerSav += partnerAmt
@@ -1312,7 +1338,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
 
       {/* Save Button - hide if viewing an already saved budget */}
       {!periodAlreadyHasBudget && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent keyboard-adjust">
           <div className={cn(
             "flex gap-2",
             existingBudget ? "flex-row" : "flex-col"
@@ -1351,7 +1377,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
       
       {/* Link to edit when viewing saved budget */}
       {periodAlreadyHasBudget && existingPeriodBudget && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent keyboard-adjust">
           <Link href={`/budget/${existingPeriodBudget.id}`} className="block">
             <Button variant="outline" className="w-full h-12 gap-2">
               <ExternalLink className="w-4 h-4" />

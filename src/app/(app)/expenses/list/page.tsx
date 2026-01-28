@@ -1,19 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { useExpenses, useDeleteExpense } from '@/hooks/use-expenses'
+import { useExpenses } from '@/hooks/use-expenses'
 import { useUser } from '@/hooks/use-user'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { ExpenseListSkeleton } from '@/components/expenses/expense-list-skeleton'
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 import { formatCurrency, formatRelativeDate } from '@/lib/utils/formatters'
 import { getCurrentBudgetPeriod, formatPeriodDisplay, getRecentPeriods } from '@/lib/utils/budget-period'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
-import { toast } from 'sonner'
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { ExpenseWithCategory, CostType } from '@/types'
 
@@ -38,15 +37,19 @@ export default function ExpenseListPage() {
   const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod.period)
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | CostType>('all')
-  const [deleteExpense, setDeleteExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   
   const { data: expenses = [], isLoading } = useExpenses({ 
     period: selectedPeriod, 
     salaryDay 
   })
-  const deleteExpenseMutation = useDeleteExpense()
-
   const recentPeriods = getRecentPeriods(salaryDay, 6)
+
+  const handleEditExpense = (expense: ExpenseWithCategory) => {
+    setEditExpense(expense)
+    setEditDialogOpen(true)
+  }
 
   // Filter expenses
   const filteredExpenses = expenses.filter((expense) => {
@@ -63,17 +66,6 @@ export default function ExpenseListPage() {
     groups[date].push(expense)
     return groups
   }, {} as Record<string, ExpenseWithCategory[]>)
-
-  const handleDelete = async () => {
-    if (!deleteExpense) return
-    try {
-      await deleteExpenseMutation.mutateAsync(deleteExpense.id)
-      toast.success('Utgift borttagen')
-      setDeleteExpense(null)
-    } catch {
-      toast.error('Kunde inte ta bort utgift')
-    }
-  }
 
   const navigatePeriod = (direction: 'prev' | 'next') => {
     const currentIndex = recentPeriods.findIndex(p => p.period === selectedPeriod)
@@ -170,9 +162,11 @@ export default function ExpenseListPage() {
                   <Card className="border-0 shadow-sm">
                     <CardContent className="p-0 divide-y divide-border">
                       {dayExpenses.map((expense) => (
-                        <div
+                        <button
                           key={expense.id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all"
+                          type="button"
+                          onClick={() => handleEditExpense(expense)}
+                          className="flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all w-full text-left"
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-stacka-sage/20 flex items-center justify-center text-lg">
@@ -186,23 +180,13 @@ export default function ExpenseListPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "font-semibold",
-                              expense.is_ccm ? "text-stacka-coral" : ""
-                            )}>
-                              -{formatCurrency(expense.amount)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-11 w-11 -mr-2 text-muted-foreground hover:text-destructive active:scale-95 transition-transform"
-                              onClick={() => setDeleteExpense(expense)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
+                          <span className={cn(
+                            "font-semibold",
+                            expense.is_ccm ? "text-stacka-coral" : ""
+                          )}>
+                            -{formatCurrency(expense.amount)}
+                          </span>
+                        </button>
                       ))}
                     </CardContent>
                   </Card>
@@ -212,26 +196,12 @@ export default function ExpenseListPage() {
         </div>
       )}
 
-      {/* Delete Dialog */}
-      <Dialog open={!!deleteExpense} onOpenChange={() => setDeleteExpense(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ta bort utgift?</DialogTitle>
-            <DialogDescription>
-              Är du säker på att du vill ta bort "{deleteExpense?.description}"?
-              Detta går inte att ångra.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDeleteExpense(null)}>
-              Avbryt
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Ta bort
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Dialog */}
+      <ExpenseEditDialog
+        expense={editExpense}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }
