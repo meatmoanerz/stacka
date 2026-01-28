@@ -59,14 +59,28 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     }
   }, [budget])
 
-  // Calculate actual spending per category
+  // Calculate actual spending per category (considering cost assignment)
+  // - personal: full amount (user pays 100%)
+  // - shared: 50% (split with partner)
+  // - partner: 0% (partner pays, not counted toward user's budget)
   const actualSpending = useMemo(() => {
     if (!expenses) return {}
-    
+
     return expenses.reduce((acc, expense) => {
       const categoryId = expense.category_id
+      const assignment = expense.cost_assignment || 'personal'
+
+      // Calculate user's share based on cost assignment
+      let userShare = 0
+      if (assignment === 'personal') {
+        userShare = expense.amount // Full amount
+      } else if (assignment === 'shared') {
+        userShare = expense.amount / 2 // 50/50 split
+      }
+      // partner = 0 (not counted)
+
       if (!acc[categoryId]) acc[categoryId] = 0
-      acc[categoryId] += expense.amount
+      acc[categoryId] += userShare
       return acc
     }, {} as Record<string, number>)
   }, [expenses])
