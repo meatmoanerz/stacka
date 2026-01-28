@@ -56,12 +56,14 @@ export function KPICards({
     },
     {
       label: 'Dagar till lön',
-      value: daysUntilSalary.toString(),
-      subtext: daysUntilSalary === 0 ? 'Idag!' : daysUntilSalary === 1 ? 'dag kvar' : 'dagar kvar',
+      value: daysUntilSalary === 0 ? 'Löning! 🥳' : daysUntilSalary.toString(),
+      subtext: daysUntilSalary === 0 ? '' : daysUntilSalary === 1 ? 'dag kvar' : 'dagar kvar',
       icon: Calendar,
-      color: 'text-stacka-blue',
-      bgColor: 'bg-stacka-blue/10',
-      cardBg: 'bg-gradient-to-br from-stacka-blue/20 to-white dark:from-stacka-blue/10 dark:to-card',
+      color: daysUntilSalary === 0 ? 'text-success' : 'text-stacka-blue',
+      bgColor: daysUntilSalary === 0 ? 'bg-success/10' : 'bg-stacka-blue/10',
+      cardBg: daysUntilSalary === 0
+        ? 'bg-gradient-to-br from-success/20 to-white dark:from-success/10 dark:to-card'
+        : 'bg-gradient-to-br from-stacka-blue/20 to-white dark:from-stacka-blue/10 dark:to-card',
     },
     {
       label: 'Sparkvot',

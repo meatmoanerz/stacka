@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useUser } from '@/hooks/use-user'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useHouseholdIncome } from '@/hooks/use-incomes'
+import { useMonthlyIncomeTotal } from '@/hooks/use-monthly-incomes'
 import { useBudgetByPeriod } from '@/hooks/use-budgets'
 import { useCategories } from '@/hooks/use-categories'
 import { getCurrentBudgetPeriod, formatPeriodDisplay } from '@/lib/utils/budget-period'
@@ -71,14 +72,17 @@ export default function DashboardPage() {
   
   const { data: expenses = [], isLoading: expensesLoading } = useExpensesByPeriod(salaryDay)
   const { data: householdIncome } = useHouseholdIncome()
+  const { data: monthlyIncomeTotal } = useMonthlyIncomeTotal(currentPeriod.period)
   const { data: budget } = useBudgetByPeriod(currentPeriod.period)
 
   if (userLoading || expensesLoading) {
     return <DashboardSkeleton />
   }
 
-  // Calculate totals - use household income (both partners combined)
-  const totalIncome = householdIncome?.total_income ?? 0
+  // Calculate totals - prefer monthly income if available, otherwise use static household income
+  const totalIncome = (monthlyIncomeTotal?.total_income ?? 0) > 0
+    ? monthlyIncomeTotal.total_income
+    : (householdIncome?.total_income ?? 0)
   
   // Calculate total spent considering cost assignment
   // - personal: full amount

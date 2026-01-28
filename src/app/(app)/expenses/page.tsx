@@ -4,16 +4,15 @@ import { useState } from 'react'
 import { ExpenseForm } from '@/components/expenses/expense-form'
 import { RecurringExpenseForm } from '@/components/expenses/recurring-expense-form'
 import { RecurringExpensesList } from '@/components/expenses/recurring-expenses-list'
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { useRecentExpenses } from '@/hooks/use-expenses'
 import { useUser } from '@/hooks/use-user'
 import { formatCurrency, formatRelativeDate } from '@/lib/utils/formatters'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Clock, Repeat, Trash2, Users, UserCheck, CreditCard, Filter } from 'lucide-react'
+import { Plus, Clock, Repeat, Users, UserCheck, CreditCard } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import { Button } from '@/components/ui/button'
-import { useDeleteExpense } from '@/hooks/use-expenses'
-import { toast } from 'sonner'
+import type { ExpenseWithCategory } from '@/types'
 
 type TabType = 'new' | 'recent' | 'recurring'
 type FilterType = 'all' | 'ccm' | 'direct'
@@ -46,9 +45,10 @@ const subtitles: Record<TabType, string> = {
 export default function AddExpensePage() {
   const [activeTab, setActiveTab] = useState<TabType>('new')
   const [filter, setFilter] = useState<FilterType>('all')
+  const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const { data: user } = useUser()
   const { data: recentExpenses = [], refetch } = useRecentExpenses(50) // Get more to filter
-  const deleteExpense = useDeleteExpense()
 
   // Filter expenses based on selected filter
   const filteredExpenses = recentExpenses.filter(expense => {
@@ -62,13 +62,9 @@ export default function AddExpensePage() {
     refetch()
   }
 
-  const handleDelete = async (id: string, description: string) => {
-    try {
-      await deleteExpense.mutateAsync(id)
-      toast.success(`"${description}" borttagen`)
-    } catch {
-      toast.error('Kunde inte ta bort')
-    }
+  const handleEditExpense = (expense: ExpenseWithCategory) => {
+    setEditExpense(expense)
+    setEditDialogOpen(true)
   }
 
   return (
@@ -189,13 +185,14 @@ export default function AddExpensePage() {
               <Card className="border-0 shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                   {filteredExpenses.map((expense, index) => (
-                    <motion.div
+                    <motion.button
                       key={expense.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
+                      onClick={() => handleEditExpense(expense)}
                       className={cn(
-                        "flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all",
+                        "flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all w-full text-left",
                         index !== filteredExpenses.length - 1 && "border-b border-border"
                       )}
                     >
@@ -228,16 +225,8 @@ export default function AddExpensePage() {
                         )}>
                           -{formatCurrency(expense.cost_assignment === 'shared' ? expense.amount / 2 : expense.amount)}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-11 w-11 -mr-2 text-muted-foreground hover:text-destructive active:scale-95 transition-transform"
-                          onClick={() => handleDelete(expense.id, expense.description)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
-                    </motion.div>
+                    </motion.button>
                   ))}
                 </CardContent>
               </Card>
@@ -264,6 +253,13 @@ export default function AddExpensePage() {
         )}
 
       </AnimatePresence>
+
+      {/* Edit Dialog */}
+      <ExpenseEditDialog
+        expense={editExpense}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }
