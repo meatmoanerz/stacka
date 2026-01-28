@@ -1312,7 +1312,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
 
       {/* Save Button - hide if viewing an already saved budget */}
       {!periodAlreadyHasBudget && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent keyboard-adjust">
           <div className={cn(
             "flex gap-2",
             existingBudget ? "flex-row" : "flex-col"
@@ -1351,7 +1351,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
       
       {/* Link to edit when viewing saved budget */}
       {periodAlreadyHasBudget && existingPeriodBudget && (
-        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="fixed bottom-20 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent keyboard-adjust">
           <Link href={`/budget/${existingPeriodBudget.id}`} className="block">
             <Button variant="outline" className="w-full h-12 gap-2">
               <ExternalLink className="w-4 h-4" />

@@ -11,7 +11,7 @@ import { useCreateLoan, useUpdateLoan } from '@/hooks/use-loans'
 import { useLoanGroups, useCreateLoanGroup, useEnsureDefaultLoanGroups, LOAN_GROUP_COLORS } from '@/hooks/use-loan-groups'
 import { usePartner } from '@/hooks/use-user'
 import { toast } from 'sonner'
-import { Loader2, ChevronDown, Check, Landmark, Plus, Percent, Users } from 'lucide-react'
+import { Loader2, ChevronDown, Check, Landmark, Plus, Percent, Users, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { LoanGroup, LoanWithGroup } from '@/types'
 
@@ -23,9 +23,15 @@ const loanSchema = z.object({
   monthly_amortization: z.number().min(0, 'Amortering kan inte vara negativ'),
   group_id: z.string().uuid().nullable().optional(),
   is_shared: z.boolean().optional(),
+  include_in_budget: z.boolean().optional(),
 })
 
 type LoanFormData = z.infer<typeof loanSchema>
+
+type AmortizationType = 'fixed' | 'percentage'
+
+// Extended type that includes the budget flag (may not be in DB yet)
+type LoanWithBudgetFlag = LoanWithGroup & { include_in_budget?: boolean }
 
 interface LoanFormProps {
   loan?: LoanWithGroup | null
@@ -49,6 +55,8 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
   const [groupOpen, setGroupOpen] = useState(false)
   const [showNewGroup, setShowNewGroup] = useState(false)
   const [newGroupName, setNewGroupName] = useState('')
+  const [amortizationType, setAmortizationType] = useState<AmortizationType>('fixed')
+  const [percentageDisplay, setPercentageDisplay] = useState('')
 
   const amountInputRef = useRef<HTMLInputElement>(null)
   const groupDropdownRef = useRef<HTMLDivElement>(null)
@@ -63,6 +71,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
       monthly_amortization: loan?.monthly_amortization || 0,
       group_id: loan?.group_id || null,
       is_shared: loan?.is_shared || false,
+      include_in_budget: (loan as LoanWithBudgetFlag)?.include_in_budget || true, // Default to true for new loans
     },
   })
 
@@ -76,6 +85,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
 
   // Watch original amount for syncing
   const watchedOriginalAmount = form.watch('original_amount')
+  const watchedCurrentBalance = form.watch('current_balance')
 
   // Sync current_balance with original_amount for new loans
   useEffect(() => {
@@ -86,6 +96,19 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
       setBalanceDisplay(watchedOriginalAmount.toString())
     }
   }, [watchedOriginalAmount, isEditing, form])
+
+  // Calculate monthly amortization when percentage mode is active
+  useEffect(() => {
+    if (amortizationType === 'percentage' && percentageDisplay) {
+      const percentage = parseFloat(percentageDisplay.replace(',', '.'))
+      const balance = watchedCurrentBalance || watchedOriginalAmount || 0
+      if (!isNaN(percentage) && balance > 0) {
+        const monthlyAmount = Math.round((balance * percentage) / 100)
+        form.setValue('monthly_amortization', monthlyAmount)
+        setAmortizationDisplay(monthlyAmount.toString())
+      }
+    }
+  }, [amortizationType, percentageDisplay, watchedCurrentBalance, watchedOriginalAmount, form])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -169,6 +192,8 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
         setBalanceDisplay('')
         setAmortizationDisplay('')
         setRateDisplay('')
+        setPercentageDisplay('')
+        setAmortizationType('fixed')
         form.reset({
           name: '',
           original_amount: 0,
@@ -177,6 +202,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
           monthly_amortization: 0,
           group_id: null,
           is_shared: false,
+          include_in_budget: true,
         })
       }
 
@@ -412,20 +438,96 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
 
       {/* Monthly Amortization */}
       <div className="space-y-2">
-        <Label className="text-muted-foreground text-sm">Månadsamortering</Label>
-        <div className="relative">
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="0"
-            value={amortizationDisplay}
-            onChange={handleAmountChange(setAmortizationDisplay, 'monthly_amortization')}
-            className={inputStyles}
-            style={{ outline: 'none', boxShadow: 'none' }}
-          />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr/mån</span>
+        <div className="flex items-center justify-between">
+          <Label className="text-muted-foreground text-sm">Månadsamortering</Label>
+          {/* Amortization Type Toggle */}
+          <div className="flex items-center gap-1 p-1 bg-muted rounded-lg">
+            <button
+              type="button"
+              onClick={() => setAmortizationType('fixed')}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                amortizationType === 'fixed'
+                  ? "bg-white dark:bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Fast belopp
+            </button>
+            <button
+              type="button"
+              onClick={() => setAmortizationType('percentage')}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-md transition-colors",
+                amortizationType === 'percentage'
+                  ? "bg-white dark:bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Procent
+            </button>
+          </div>
         </div>
+
+        {amortizationType === 'fixed' ? (
+          <div className="relative">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="0"
+              value={amortizationDisplay}
+              onChange={handleAmountChange(setAmortizationDisplay, 'monthly_amortization')}
+              className={inputStyles}
+              style={{ outline: 'none', boxShadow: 'none' }}
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr/mån</span>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="relative">
+              <Percent className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={percentageDisplay}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.')
+                  setPercentageDisplay(value)
+                }}
+                className={cn(inputStyles, "pl-10")}
+                style={{ outline: 'none', boxShadow: 'none' }}
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">% av skuld</span>
+            </div>
+            {/* Show calculated amount */}
+            {amortizationDisplay && parseInt(amortizationDisplay) > 0 && (
+              <p className="text-xs text-muted-foreground pl-1">
+                = {parseInt(amortizationDisplay).toLocaleString('sv-SE')} kr/mån
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Auto-add to Budget */}
+      <div className="flex items-center justify-between p-4 rounded-xl bg-stacka-peach/10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-stacka-gold/20 flex items-center justify-center">
+            <Calendar className="w-5 h-5 text-stacka-gold" />
+          </div>
+          <div>
+            <p className="font-medium text-sm">Lägg till i budget</p>
+            <p className="text-xs text-muted-foreground">
+              Inkludera amortering och ränta i månadens budget
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={form.watch('include_in_budget') ?? true}
+          onCheckedChange={(checked) => form.setValue('include_in_budget', checked)}
+        />
       </div>
 
       {/* Share with Partner */}

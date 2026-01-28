@@ -80,8 +80,9 @@ export default function DashboardPage() {
   }
 
   // Calculate totals - prefer monthly income if available, otherwise use static household income
-  const totalIncome = (monthlyIncomeTotal?.total_income ?? 0) > 0
-    ? monthlyIncomeTotal.total_income
+  const monthlyTotal = monthlyIncomeTotal?.total_income ?? 0
+  const totalIncome = monthlyTotal > 0
+    ? monthlyTotal
     : (householdIncome?.total_income ?? 0)
   
   // Calculate total spent considering cost assignment

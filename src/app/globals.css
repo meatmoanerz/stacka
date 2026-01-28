@@ -350,3 +350,26 @@ input[type="number"] {
   min-width: 44px;
   min-height: 44px;
 }
+
+/* Mobile keyboard handling */
+/* Hide bottom nav when keyboard is likely open (viewport height is small) */
+@media (max-height: 500px) {
+  .keyboard-hide {
+    display: none !important;
+  }
+
+  /* Adjust fixed bottom elements when keyboard is open */
+  .keyboard-adjust {
+    bottom: 0 !important;
+  }
+}
+
+/* Alternative: Use visual viewport for more accurate keyboard detection */
+/* This class is toggled via JavaScript when input is focused on mobile */
+.keyboard-open .keyboard-hide {
+  display: none !important;
+}
+
+.keyboard-open .keyboard-adjust {
+  bottom: 0 !important;
+}
