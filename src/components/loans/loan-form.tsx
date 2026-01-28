@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useCreateLoan, useUpdateLoan } from '@/hooks/use-loans'
-import { useLoanGroups, useCreateLoanGroup, DEFAULT_LOAN_GROUPS, LOAN_GROUP_COLORS } from '@/hooks/use-loan-groups'
+import { useLoanGroups, useCreateLoanGroup, useEnsureDefaultLoanGroups, LOAN_GROUP_COLORS } from '@/hooks/use-loan-groups'
 import { usePartner } from '@/hooks/use-user'
 import { toast } from 'sonner'
 import { Loader2, ChevronDown, Check, Landmark, Plus, Percent, Users } from 'lucide-react'
@@ -66,21 +66,13 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
     },
   })
 
-  // Create default groups if none exist
+  // Ensure default loan groups exist (deduplicated check built-in)
+  const { ensureDefaults } = useEnsureDefaultLoanGroups()
   useEffect(() => {
-    if (!groupsLoading && loanGroups && loanGroups.length === 0) {
-      // Create default groups
-      Promise.all(
-        DEFAULT_LOAN_GROUPS.map(group =>
-          createGroup.mutateAsync({
-            name: group.name,
-            description: group.description,
-            color: group.color,
-          })
-        )
-      ).catch(console.error)
+    if (!groupsLoading && loanGroups) {
+      ensureDefaults()
     }
-  }, [groupsLoading, loanGroups, createGroup])
+  }, [groupsLoading, loanGroups, ensureDefaults])
 
   // Watch original amount for syncing
   const watchedOriginalAmount = form.watch('original_amount')
@@ -88,12 +80,10 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
   // Sync current_balance with original_amount for new loans
   useEffect(() => {
     if (!isEditing && watchedOriginalAmount > 0) {
-      const currentBalance = form.getValues('current_balance')
-      const originalAmount = form.getValues('original_amount')
-      if (currentBalance === 0 || currentBalance === originalAmount) {
-        form.setValue('current_balance', watchedOriginalAmount)
-        setBalanceDisplay(watchedOriginalAmount.toString())
-      }
+      // For new loans, always sync current_balance to original_amount
+      // since new loans haven't been paid down yet
+      form.setValue('current_balance', watchedOriginalAmount)
+      setBalanceDisplay(watchedOriginalAmount.toString())
     }
   }, [watchedOriginalAmount, isEditing, form])
 
@@ -256,11 +246,16 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
         <Label className="text-muted-foreground text-sm">Typ av lån</Label>
         <div className="relative">
           <div
-            className={cn(inputStyles, "flex items-center justify-between cursor-pointer")}
-            onClick={() => setGroupOpen(!groupOpen)}
+            className={cn(inputStyles, "flex items-center justify-between cursor-pointer", groupsLoading && "opacity-50")}
+            onClick={() => !groupsLoading && setGroupOpen(!groupOpen)}
           >
             <div className="flex items-center gap-2">
-              {selectedGroup ? (
+              {groupsLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                  <span className="text-muted-foreground/50">Laddar typer...</span>
+                </>
+              ) : selectedGroup ? (
                 <>
                   <div
                     className="w-3 h-3 rounded-full"
@@ -279,7 +274,7 @@ export function LoanForm({ loan, onSuccess }: LoanFormProps) {
           </div>
 
           {groupOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
               {/* No group option */}
               <button
                 type="button"
