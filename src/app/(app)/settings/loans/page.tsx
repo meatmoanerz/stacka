@@ -63,7 +63,7 @@ export default function LoansSettingsPage() {
       if (result.created === 0) {
         toast.info(result.message || 'Inga nya utgifter skapades')
       } else {
-        toast.success(`${result.created} utgifter skapade! ${result.loansUpdated > 0 ? `${result.loansUpdated} lån uppdaterade.` : ''}`)
+        toast.success(`${result.created} utgifter skapade!${result.loansUpdated && result.loansUpdated > 0 ? ` ${result.loansUpdated} lån uppdaterade.` : ''}`)
       }
     } catch (error) {
       console.error('Failed to create expenses from loans:', error)
