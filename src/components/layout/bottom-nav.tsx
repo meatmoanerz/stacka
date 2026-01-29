@@ -130,11 +130,17 @@ export function BottomNav({ className }: BottomNavProps) {
     <nav
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-card/95 backdrop-blur-lg border-t border-border keyboard-hide",
+        // Use safe-area-inset for positioning to handle browser chrome changes
+        "pb-[env(safe-area-inset-bottom,0px)]",
         className
       )}
+      style={{
+        // Ensure consistent positioning with browser chrome changes
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       aria-label="Mobilnavigation"
     >
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2 pb-safe">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-2">
         {navItems.map((item) => {
           // Check if this route is active
           const isActive = item.matchPath
@@ -185,8 +191,6 @@ export function BottomNav({ className }: BottomNavProps) {
           )
         })}
       </div>
-      {/* Extra padding for devices with home indicator */}
-      <div className="h-safe-area-inset-bottom bg-white/95 dark:bg-card/95" />
     </nav>
   )
 }

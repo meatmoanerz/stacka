@@ -160,14 +160,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Safe area for mobile */
+/* Safe area for mobile - consistent regardless of browser chrome state */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
   }
   .h-safe-area-inset-bottom {
-    height: env(safe-area-inset-bottom);
+    height: max(env(safe-area-inset-bottom), 0px);
   }
+}
+
+/* Ensure consistent bottom nav positioning on iOS/Android */
+/* Uses 100dvh (dynamic viewport height) which accounts for browser chrome */
+.bottom-nav-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
 }
 
 /* Ensure minimum tap target size */

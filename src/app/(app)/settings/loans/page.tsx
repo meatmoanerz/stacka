@@ -64,7 +64,7 @@ export default function LoansSettingsPage() {
 
   const totalMonthlyCost = totalMonthlyAmortization + totalMonthlyInterest
 
-  // Group loans by loan_group
+  // Group loans by loan_group name (to merge groups with same name from user and partner)
   const groupedLoans = loans?.reduce((acc, loan) => {
     const groupId = loan.group_id || 'ungrouped'
     if (!acc[groupId]) {
@@ -73,6 +73,22 @@ export default function LoansSettingsPage() {
     acc[groupId].push(loan)
     return acc
   }, {} as Record<string, typeof loans>)
+
+  // Deduplicate loan groups by name - merge groups with same name
+  const uniqueGroups = loanGroups?.reduce((acc, group) => {
+    const existingGroup = acc.find(g => g.name.toLowerCase() === group.name.toLowerCase())
+    if (!existingGroup) {
+      acc.push({ ...group, mergedIds: [group.id] })
+    } else {
+      existingGroup.mergedIds.push(group.id)
+    }
+    return acc
+  }, [] as Array<(typeof loanGroups)[number] & { mergedIds: string[] }>)
+
+  // Helper to get loans for a merged group
+  const getLoansForMergedGroup = (mergedIds: string[]) => {
+    return mergedIds.flatMap(id => groupedLoans?.[id] || [])
+  }
 
   return (
     <div className="p-4 space-y-6 pb-24">
@@ -167,14 +183,20 @@ export default function LoansSettingsPage() {
           className="space-y-6"
         >
           {/* Grouped by loan type - Collapsible */}
-          {groupedLoans && loanGroups?.map(group => {
-            const groupLoans = groupedLoans[group.id]
+          {groupedLoans && uniqueGroups?.map(group => {
+            const groupLoans = getLoansForMergedGroup(group.mergedIds)
             if (!groupLoans || groupLoans.length === 0) return null
 
             const isExpanded = expandedGroups.has(group.id)
             const groupTotal = groupLoans.reduce((sum, loan) => sum + loan.current_balance, 0)
             const groupAmortization = groupLoans.reduce((sum, loan) => sum + loan.monthly_amortization, 0)
-            const groupAvgRate = groupLoans.reduce((sum, loan) => sum + (loan.current_balance * loan.interest_rate), 0) / groupTotal
+            const groupMonthlyInterest = groupLoans.reduce((sum, loan) => {
+              return sum + (loan.current_balance * (loan.interest_rate / 100 / 12))
+            }, 0)
+            const groupTotalMonthlyCost = groupAmortization + groupMonthlyInterest
+            const groupAvgRate = groupTotal > 0
+              ? groupLoans.reduce((sum, loan) => sum + (loan.current_balance * loan.interest_rate), 0) / groupTotal
+              : 0
 
             return (
               <Card key={group.id} className="border-0 shadow-sm overflow-hidden">
@@ -184,20 +206,26 @@ export default function LoansSettingsPage() {
                   onClick={() => toggleGroup(group.id)}
                   className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div
-                      className="w-4 h-4 rounded-full"
+                      className="w-4 h-4 rounded-full shrink-0"
                       style={{ backgroundColor: group.color }}
                     />
-                    <div className="text-left">
+                    <div className="text-left min-w-0">
                       <h2 className="font-semibold text-stacka-olive">{group.name}</h2>
-                      <p className="text-xs text-muted-foreground">
-                        {groupLoans.length} lån • {formatCurrency(groupAmortization)}/mån • {groupAvgRate.toFixed(2)}% snittränta
-                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span>{groupLoans.length} lån</span>
+                        <span>{groupAvgRate.toFixed(2)}% snittränta</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+                        <span>Amor: {formatCurrency(groupAmortization)}/mån</span>
+                        <span>Ränta: {formatCurrency(Math.round(groupMonthlyInterest))}/mån</span>
+                        <span className="font-medium text-foreground">Totalt: {formatCurrency(Math.round(groupTotalMonthlyCost))}/mån</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-stacka-olive">
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="font-bold text-stacka-olive text-right">
                       {formatCurrency(groupTotal)}
                     </span>
                     <ChevronDown className={cn(
@@ -235,6 +263,13 @@ export default function LoansSettingsPage() {
             const isExpanded = expandedGroups.has('ungrouped')
             const groupTotal = ungroupedLoans.reduce((sum, loan) => sum + loan.current_balance, 0)
             const groupAmortization = ungroupedLoans.reduce((sum, loan) => sum + loan.monthly_amortization, 0)
+            const groupMonthlyInterest = ungroupedLoans.reduce((sum, loan) => {
+              return sum + (loan.current_balance * (loan.interest_rate / 100 / 12))
+            }, 0)
+            const groupTotalMonthlyCost = groupAmortization + groupMonthlyInterest
+            const groupAvgRate = groupTotal > 0
+              ? ungroupedLoans.reduce((sum, loan) => sum + (loan.current_balance * loan.interest_rate), 0) / groupTotal
+              : 0
 
             return (
               <Card className="border-0 shadow-sm overflow-hidden">
@@ -243,17 +278,23 @@ export default function LoansSettingsPage() {
                   onClick={() => toggleGroup('ungrouped')}
                   className="w-full p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 rounded-full bg-muted-foreground/30" />
-                    <div className="text-left">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-4 h-4 rounded-full bg-muted-foreground/30 shrink-0" />
+                    <div className="text-left min-w-0">
                       <h2 className="font-semibold text-muted-foreground">Ej kategoriserade</h2>
-                      <p className="text-xs text-muted-foreground">
-                        {ungroupedLoans.length} lån • {formatCurrency(groupAmortization)}/mån
-                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        <span>{ungroupedLoans.length} lån</span>
+                        <span>{groupAvgRate.toFixed(2)}% snittränta</span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+                        <span>Amor: {formatCurrency(groupAmortization)}/mån</span>
+                        <span>Ränta: {formatCurrency(Math.round(groupMonthlyInterest))}/mån</span>
+                        <span className="font-medium text-foreground">Totalt: {formatCurrency(Math.round(groupTotalMonthlyCost))}/mån</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold">
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="font-bold text-right">
                       {formatCurrency(groupTotal)}
                     </span>
                     <ChevronDown className={cn(
