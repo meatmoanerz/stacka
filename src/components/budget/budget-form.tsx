@@ -21,6 +21,8 @@ import { useHouseholdIncomeDetails } from '@/hooks/use-incomes'
 import { useHouseholdMonthlyIncomes } from '@/hooks/use-monthly-incomes'
 import { useCreateBudget, useUpdateBudget, useDeleteBudget, usePreviousBudget, useBudgetByPeriod } from '@/hooks/use-budgets'
 import { useUser, usePartner } from '@/hooks/use-user'
+import { useLoans } from '@/hooks/use-loans'
+import { useCCMInvoice } from '@/hooks/use-ccm-invoices'
 import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod, getNextPeriods } from '@/lib/utils/budget-period'
 import { toast } from 'sonner'
@@ -38,7 +40,6 @@ import {
   User,
   History,
   Copy,
-  Info,
   ExternalLink,
   Lock,
   CreditCard,
@@ -79,6 +80,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
   const { data: partner } = usePartner()
   const { data: householdData, isLoading: incomesLoading } = useHouseholdIncomeDetails()
   const { fixed, variable, savings, isLoading: categoriesLoading } = useCategoriesByType()
+  const { data: loans } = useLoans()
 
   // Get monthly incomes for the selected period (preferred over static incomes)
   const createBudget = useCreateBudget()
@@ -113,6 +115,9 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
 
   // Monthly incomes for the selected period (preferred over static incomes)
   const { data: monthlyIncomes, isLoading: monthlyIncomesLoading } = useHouseholdMonthlyIncomes(period)
+
+  // CCM invoice for auto-filling "Kreditkort" budget item
+  const { data: ccmInvoice } = useCCMInvoice(period)
   
   // Check if selected period already has a saved budget (only relevant in /new)
   const { data: existingPeriodBudget, isLoading: checkingExistingBudget } = useBudgetByPeriod(
@@ -138,6 +143,21 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
     })
     return map
   }, [previousBudget])
+
+  // Calculate loan totals for auto-filling budget
+  const loanTotals = useMemo(() => {
+    if (!loans || loans.length === 0) return { totalInterest: 0, totalAmortization: 0 }
+
+    const totalInterest = loans.reduce((sum, loan) => {
+      return sum + Math.round(loan.current_balance * (loan.interest_rate / 100 / 12))
+    }, 0)
+
+    const totalAmortization = loans.reduce((sum, loan) => {
+      return sum + loan.monthly_amortization
+    }, 0)
+
+    return { totalInterest, totalAmortization }
+  }, [loans])
 
   // Helper: Map budget items from partner's category IDs to current user's category IDs by matching names
   const mapBudgetItemsToCurrentCategories = useCallback((
@@ -329,14 +349,29 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
         }
       }
       
-      // No draft - use category defaults and reset incomes to database values
+      // No draft - use category defaults with auto-fill from loans and CCM and reset incomes to database values
       const items: Record<string, BudgetItemState> = {}
       allCategories.forEach(cat => {
+        let defaultValue = cat.default_value || 0
+
+        // Auto-fill "Ränta bolån" from loan interest
+        if (cat.name === 'Ränta bolån' && loanTotals.totalInterest > 0) {
+          defaultValue = loanTotals.totalInterest
+        }
+        // Auto-fill "Amortering" from loan amortization
+        else if (cat.name === 'Amortering' && loanTotals.totalAmortization > 0) {
+          defaultValue = loanTotals.totalAmortization
+        }
+        // Auto-fill "Kreditkort" from CCM invoice
+        else if (cat.name === 'Kreditkort' && ccmInvoice?.actual_amount && ccmInvoice.actual_amount > 0) {
+          defaultValue = ccmInvoice.actual_amount
+        }
+
         items[cat.id] = {
-          total: cat.default_value || 0,
+          total: defaultValue,
           isSplit: false,
           hasExplicitSplit: false,
-          is_ccm: false,
+          is_ccm: cat.name === 'Kreditkort',
         }
       })
       setBudgetItems(items)
@@ -502,21 +537,36 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
         console.error('Failed to load draft during init:', e)
       }
       
-      // No draft - use category defaults
+      // No draft - use category defaults with auto-fill from loans and CCM
       const items: Record<string, BudgetItemState> = {}
       allCategories.forEach(cat => {
+        let defaultValue = cat.default_value || 0
+
+        // Auto-fill "Ränta bolån" from loan interest
+        if (cat.name === 'Ränta bolån' && loanTotals.totalInterest > 0) {
+          defaultValue = loanTotals.totalInterest
+        }
+        // Auto-fill "Amortering" from loan amortization
+        else if (cat.name === 'Amortering' && loanTotals.totalAmortization > 0) {
+          defaultValue = loanTotals.totalAmortization
+        }
+        // Auto-fill "Kreditkort" from CCM invoice
+        else if (cat.name === 'Kreditkort' && ccmInvoice?.actual_amount && ccmInvoice.actual_amount > 0) {
+          defaultValue = ccmInvoice.actual_amount
+        }
+
         items[cat.id] = {
-          total: cat.default_value || 0,
+          total: defaultValue,
           isSplit: false,
           hasExplicitSplit: false,
-          is_ccm: false,
+          is_ccm: cat.name === 'Kreditkort', // Auto-mark Kreditkort as CCM
         }
       })
       setBudgetItems(items)
       setInitialized(true)
       setDraftLoaded(true)
     }
-  }, [existingBudget, fixed, variable, savings, categoriesLoading, initialized, period, householdData])
+  }, [existingBudget, fixed, variable, savings, categoriesLoading, initialized, period, householdData, loanTotals, ccmInvoice])
 
   // Calculations
   const userIncome = useMemo(() => 

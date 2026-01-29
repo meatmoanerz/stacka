@@ -383,3 +383,181 @@ export function calculateLoanSummary(loan: Loan) {
     progressPercent: Math.round(progressPercent * 10) / 10,
   }
 }
+
+// Type for loan group
+interface LoanGroupBasic {
+  id: string
+  name: string
+}
+
+// Get loan type display name
+function getLoanTypeName(loan: Loan & { loan_group?: LoanGroupBasic | null }): string {
+  return loan.loan_group?.name || 'Lån'
+}
+
+// Create expenses from loans (interest and amortization)
+export function useCreateExpensesFromLoans() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      loans,
+      period,
+      date
+    }: {
+      loans: LoanWithGroup[]
+      period: string
+      date: string
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      // Get user's categories
+      const { data: categories, error: catError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (catError) throw catError
+
+      // Find or create "Ränta bolån" category
+      let interestCategory = categories?.find(c => c.name === 'Ränta bolån')
+      if (!interestCategory) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: newCat, error: createError } = await (supabase.from('categories') as any)
+          .insert({
+            user_id: user.id,
+            name: 'Ränta bolån',
+            cost_type: 'Fixed',
+            subcategory: 'Housing',
+            is_default: false,
+          })
+          .select()
+          .single()
+        if (createError) throw createError
+        interestCategory = newCat
+      }
+
+      // Find or create "Amortering" category
+      let amortizationCategory = categories?.find(c => c.name === 'Amortering')
+      if (!amortizationCategory) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: newCat, error: createError } = await (supabase.from('categories') as any)
+          .insert({
+            user_id: user.id,
+            name: 'Amortering',
+            cost_type: 'Fixed',
+            subcategory: 'Loans',
+            is_default: false,
+          })
+          .select()
+          .single()
+        if (createError) throw createError
+        amortizationCategory = newCat
+      }
+
+      // Check for existing loan expenses in this period to prevent duplicates
+      const { data: existingExpenses, error: existingError } = await supabase
+        .from('expenses')
+        .select('id, description, category_id')
+        .eq('user_id', user.id)
+        .gte('date', `${period}-01`)
+        .lte('date', `${period}-31`)
+        .in('category_id', [interestCategory?.id, amortizationCategory?.id].filter(Boolean))
+
+      if (existingError) throw existingError
+
+      const expenses: Array<{
+        user_id: string
+        category_id: string
+        amount: number
+        description: string
+        date: string
+        cost_assignment: 'personal' | 'shared' | 'partner'
+        is_ccm: boolean
+      }> = []
+
+      const loansToUpdate: Array<{ id: string; newBalance: number }> = []
+
+      for (const loan of loans) {
+        const loanTypeName = getLoanTypeName(loan)
+        const interestDescription = `${loanTypeName} - ${loan.name} (Ränta)`
+        const amortizationDescription = `${loanTypeName} - ${loan.name} (Amortering)`
+
+        // Calculate monthly interest
+        const monthlyInterest = Math.round(loan.current_balance * (loan.interest_rate / 100 / 12))
+
+        // Check if interest expense already exists
+        const interestExists = existingExpenses?.some(
+          e => e.description === interestDescription && e.category_id === interestCategory?.id
+        )
+
+        if (!interestExists && monthlyInterest > 0 && interestCategory) {
+          expenses.push({
+            user_id: user.id,
+            category_id: interestCategory.id,
+            amount: monthlyInterest,
+            description: interestDescription,
+            date,
+            cost_assignment: loan.is_shared ? 'shared' : 'personal',
+            is_ccm: false,
+          })
+        }
+
+        // Check if amortization expense already exists
+        const amortizationExists = existingExpenses?.some(
+          e => e.description === amortizationDescription && e.category_id === amortizationCategory?.id
+        )
+
+        if (!amortizationExists && loan.monthly_amortization > 0 && amortizationCategory) {
+          expenses.push({
+            user_id: user.id,
+            category_id: amortizationCategory.id,
+            amount: loan.monthly_amortization,
+            description: amortizationDescription,
+            date,
+            cost_assignment: loan.is_shared ? 'shared' : 'personal',
+            is_ccm: false,
+          })
+
+          // Track loan balance update
+          const newBalance = Math.max(0, loan.current_balance - loan.monthly_amortization)
+          loansToUpdate.push({ id: loan.id, newBalance })
+        }
+      }
+
+      if (expenses.length === 0) {
+        return { created: 0, skipped: loans.length * 2, message: 'Alla utgifter finns redan för denna period' }
+      }
+
+      // Insert expenses
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insertError } = await (supabase.from('expenses') as any).insert(expenses)
+      if (insertError) throw insertError
+
+      // Update loan balances
+      for (const loanUpdate of loansToUpdate) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase.from('loans') as any)
+          .update({
+            current_balance: loanUpdate.newBalance,
+            last_amortization_date: date,
+          })
+          .eq('id', loanUpdate.id)
+      }
+
+      return {
+        created: expenses.length,
+        skipped: (loans.length * 2) - expenses.length,
+        loansUpdated: loansToUpdate.length
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      queryClient.invalidateQueries({ queryKey: ['loans'] })
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}

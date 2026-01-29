@@ -11,21 +11,65 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Landmark, Plus, TrendingDown, Percent, Wallet, ChevronDown } from 'lucide-react'
-import { useAllLoans } from '@/hooks/use-loans'
+import { ArrowLeft, Landmark, Plus, TrendingDown, Percent, Wallet, ChevronDown, Receipt, Loader2 } from 'lucide-react'
+import { useAllLoans, useCreateExpensesFromLoans } from '@/hooks/use-loans'
 import { useLoanGroups } from '@/hooks/use-loan-groups'
+import { useUser } from '@/hooks/use-user'
 import { LoanForm, LoanCard } from '@/components/loans'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils/cn'
+import { getCurrentBudgetPeriod, formatPeriodDisplay } from '@/lib/utils/budget-period'
+import { format } from 'date-fns'
+import { toast } from 'sonner'
 
 export default function LoansSettingsPage() {
   const router = useRouter()
   const [addOpen, setAddOpen] = useState(false)
+  const [createExpensesOpen, setCreateExpensesOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
-  const { data: loans, isLoading } = useAllLoans()
+  const { data: user } = useUser()
+
+  const { data: loans, isLoading, ownLoans } = useAllLoans()
   const { data: loanGroups } = useLoanGroups()
+  const createExpensesFromLoans = useCreateExpensesFromLoans()
+
+  const salaryDay = user?.salary_day || 25
+  const currentPeriod = getCurrentBudgetPeriod(salaryDay)
+
+  const handleCreateExpenses = async () => {
+    if (!ownLoans || ownLoans.length === 0) return
+
+    try {
+      const result = await createExpensesFromLoans.mutateAsync({
+        loans: ownLoans,
+        period: currentPeriod.period,
+        date: format(new Date(), 'yyyy-MM-dd'),
+      })
+
+      setCreateExpensesOpen(false)
+
+      if (result.created === 0) {
+        toast.info(result.message || 'Inga nya utgifter skapades')
+      } else {
+        toast.success(`${result.created} utgifter skapade! ${result.loansUpdated > 0 ? `${result.loansUpdated} lån uppdaterade.` : ''}`)
+      }
+    } catch (error) {
+      console.error('Failed to create expenses from loans:', error)
+      toast.error('Kunde inte skapa utgifter från lån')
+    }
+  }
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups(prev => {
@@ -166,6 +210,24 @@ export default function LoansSettingsPage() {
               <p className="text-2xl font-bold text-stacka-olive">{avgInterestRate.toFixed(2)}%</p>
             </CardContent>
           </Card>
+        </motion.div>
+      )}
+
+      {/* Create Expenses Button */}
+      {ownLoans && ownLoans.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+        >
+          <Button
+            variant="outline"
+            className="w-full h-12 gap-2 border-stacka-olive/30 hover:bg-stacka-sage/20"
+            onClick={() => setCreateExpensesOpen(true)}
+          >
+            <Receipt className="w-5 h-5 text-stacka-olive" />
+            Registrera månadskostnader som utgifter
+          </Button>
         </motion.div>
       )}
 
@@ -399,6 +461,52 @@ export default function LoansSettingsPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Create Expenses Confirmation Dialog */}
+      <AlertDialog open={createExpensesOpen} onOpenChange={setCreateExpensesOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-stacka-olive" />
+              Skapa utgifter från lån?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Detta skapar utgifter för <strong>{formatPeriodDisplay(currentPeriod.period)}</strong> baserat på dina {ownLoans?.length || 0} lån:
+                </p>
+                <ul className="text-sm space-y-1 pl-4">
+                  <li>• <strong>Ränta bolån</strong> - Räntekostnad för varje lån</li>
+                  <li>• <strong>Amortering</strong> - Amortering för varje lån (om &gt; 0)</li>
+                </ul>
+                <p className="text-sm">
+                  Lånens kvarvarande belopp uppdateras automatiskt med amorteringsbeloppet.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Om utgifter redan finns för denna period hoppas de över.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCreateExpenses}
+              disabled={createExpensesFromLoans.isPending}
+              className="bg-stacka-olive hover:bg-stacka-olive/90"
+            >
+              {createExpensesFromLoans.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Skapar...
+                </>
+              ) : (
+                'Skapa utgifter'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
