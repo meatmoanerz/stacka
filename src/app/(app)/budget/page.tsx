@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import Link from 'next/link'
 import { useBudgets } from '@/hooks/use-budgets'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
-import { useUser } from '@/hooks/use-user'
+import { useUser, usePartner } from '@/hooks/use-user'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -13,16 +13,18 @@ import { IncomeOverviewCard } from '@/components/budget/income-overview-card'
 import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
 import { motion } from 'framer-motion'
-import { Plus, ChevronRight, Wallet } from 'lucide-react'
+import { Plus, ChevronRight, Wallet, Users } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { Budget } from '@/types'
 
 export default function BudgetListPage() {
   const { data: user } = useUser()
+  const { data: partner } = usePartner()
   const { data: budgets, isLoading } = useBudgets()
-  
+
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
+  const hasPartner = !!partner
 
   if (isLoading) {
     return <BudgetListSkeleton />
@@ -121,6 +123,7 @@ export default function BudgetListPage() {
               index={index}
               isCurrent={budget.period === currentPeriod.period}
               salaryDay={salaryDay}
+              hasPartner={hasPartner}
             />
           ))}
         </div>
@@ -129,14 +132,22 @@ export default function BudgetListPage() {
   )
 }
 
-function BudgetCard({ budget, index, isCurrent, salaryDay }: { budget: Budget; index: number; isCurrent: boolean; salaryDay: number }) {
+function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budget: Budget; index: number; isCurrent: boolean; salaryDay: number; hasPartner: boolean }) {
   // Fetch actual expenses for this period
   const { data: expenses } = useExpensesByPeriod(budget.period, salaryDay)
 
-  // Calculate actual spending from expenses (considering cost assignment)
+  // Calculate actual spending from expenses
+  // When partner is connected: show total spend (all expenses at full amount)
+  // When no partner: show user's portion (personal: 100%, shared: 50%, partner: 0%)
   const actualSpent = useMemo(() => {
     if (!expenses) return 0
 
+    if (hasPartner) {
+      // Total household spend - count all expenses at full amount
+      return expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    }
+
+    // User's portion only (no partner)
     return expenses.reduce((sum, expense) => {
       const assignment = expense.cost_assignment || 'personal'
 
@@ -148,7 +159,7 @@ function BudgetCard({ budget, index, isCurrent, salaryDay }: { budget: Budget; i
       // partner = 0 (not counted)
       return sum
     }, 0)
-  }, [expenses])
+  }, [expenses, hasPartner])
 
   const spentRatio = budget.total_income > 0
     ? (actualSpent / budget.total_income) * 100
@@ -183,7 +194,10 @@ function BudgetCard({ budget, index, isCurrent, salaryDay }: { budget: Budget; i
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Förbrukat</span>
+                <span className="text-muted-foreground flex items-center gap-1">
+                  Förbrukat
+                  {hasPartner && <Users className="w-3 h-3 text-stacka-blue" />}
+                </span>
                 <span className="font-medium">
                   {formatCurrency(actualSpent)} / {formatCurrency(budget.total_income)}
                 </span>

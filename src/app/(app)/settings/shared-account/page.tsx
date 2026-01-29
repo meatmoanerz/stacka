@@ -1,21 +1,23 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Wallet, Calculator, Info } from 'lucide-react'
+import { ArrowLeft, Wallet, Calculator, Info, Save, Check } from 'lucide-react'
 import { useBudgets, useBudget } from '@/hooks/use-budgets'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod, getRecentPeriods } from '@/lib/utils/budget-period'
 import { cn } from '@/lib/utils/cn'
+import { toast } from 'sonner'
 
-// Local storage key for selected categories
+// Local storage keys
 const STORAGE_KEY = 'stacka-shared-account-categories'
+const DEFAULT_CATEGORIES_KEY = 'stacka-shared-account-default-categories'
 
 export default function SharedAccountPage() {
   const router = useRouter()
@@ -29,13 +31,39 @@ export default function SharedAccountPage() {
 
   const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod.period)
 
-  // Initialize selectedCategories from localStorage
+  // Load default categories from localStorage
+  const loadDefaultCategories = useCallback((): Set<string> => {
+    if (typeof window === 'undefined') return new Set()
+    try {
+      const saved = localStorage.getItem(DEFAULT_CATEGORIES_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) {
+          return new Set(parsed)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load default categories:', e)
+    }
+    return new Set()
+  }, [])
+
+  // Initialize selectedCategories from localStorage (period-specific) or defaults
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try {
+      // First try to load period-specific saved categories
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return new Set(parsed)
+        }
+      }
+      // If no period-specific, load defaults
+      const defaults = localStorage.getItem(DEFAULT_CATEGORIES_KEY)
+      if (defaults) {
+        const parsed = JSON.parse(defaults)
         if (Array.isArray(parsed)) {
           return new Set(parsed)
         }
@@ -46,15 +74,35 @@ export default function SharedAccountPage() {
     return new Set()
   })
 
+  // Save current selection as default
+  const saveAsDefault = useCallback(() => {
+    try {
+      localStorage.setItem(DEFAULT_CATEGORIES_KEY, JSON.stringify(Array.from(selectedCategories)))
+      toast.success('Kategorier sparade som standard')
+    } catch (e) {
+      console.error('Failed to save default categories:', e)
+      toast.error('Kunde inte spara standardval')
+    }
+  }, [selectedCategories])
+
   // Find budget for selected period
   const selectedBudget = budgets?.find(b => b.period === selectedPeriod)
   const { data: budgetDetails } = useBudget(selectedBudget?.id || '')
 
-  // Get fixed expense items from budget
-  const fixedItems = useMemo(() => {
-    if (!budgetDetails?.budget_items) return []
-    return budgetDetails.budget_items.filter(item => item.type === 'fixedExpense')
+  // Get all expense items from budget (fixed, variable, savings)
+  const allItems = useMemo(() => {
+    if (!budgetDetails?.budget_items) return { fixed: [], variable: [], savings: [] }
+    return {
+      fixed: budgetDetails.budget_items.filter(item => item.type === 'fixedExpense'),
+      variable: budgetDetails.budget_items.filter(item => item.type === 'variableExpense'),
+      savings: budgetDetails.budget_items.filter(item => item.type === 'savings'),
+    }
   }, [budgetDetails])
+
+  // Combined list of all items for calculations
+  const allItemsList = useMemo(() => {
+    return [...allItems.fixed, ...allItems.variable, ...allItems.savings]
+  }, [allItems])
 
   // Save selected categories to localStorage when they change
   useEffect(() => {
@@ -80,7 +128,7 @@ export default function SharedAccountPage() {
 
   // Calculate totals
   const totals = useMemo(() => {
-    const selectedItems = fixedItems.filter(item => selectedCategories.has(item.category_id || ''))
+    const selectedItems = allItemsList.filter(item => selectedCategories.has(item.category_id || ''))
     const total = selectedItems.reduce((sum, item) => sum + item.amount, 0)
     const perPerson = total / 2
 
@@ -90,7 +138,7 @@ export default function SharedAccountPage() {
       selectedCount: selectedItems.length,
       items: selectedItems,
     }
-  }, [fixedItems, selectedCategories])
+  }, [allItemsList, selectedCategories])
 
   const hasPartner = !!partner
 
@@ -215,7 +263,7 @@ export default function SharedAccountPage() {
       )}
 
       {/* Categories Selection */}
-      {fixedItems.length > 0 && (
+      {allItemsList.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -225,21 +273,21 @@ export default function SharedAccountPage() {
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
                 <Wallet className="w-4 h-4 text-stacka-olive" />
-                Fasta kostnader
+                Kategorier
               </CardTitle>
               <CardDescription className="text-xs">
                 Välj vilka kategorier som ska ingå i gemensamma kontot
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {/* Select All / Deselect All */}
-              <div className="flex gap-2 mb-3">
+            <CardContent className="space-y-4">
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs"
                   onClick={() => {
-                    const allIds = new Set(fixedItems.map(item => item.category_id || '').filter(Boolean))
+                    const allIds = new Set(allItemsList.map(item => item.category_id || '').filter(Boolean))
                     setSelectedCategories(allIds)
                   }}
                 >
@@ -253,30 +301,100 @@ export default function SharedAccountPage() {
                 >
                   Avmarkera alla
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs gap-1.5"
+                  onClick={saveAsDefault}
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  Spara som standard
+                </Button>
               </div>
 
-              {/* Category List */}
-              {fixedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer",
-                    selectedCategories.has(item.category_id || '')
-                      ? "bg-stacka-sage/30"
-                      : "bg-muted/50 hover:bg-muted"
-                  )}
-                  onClick={() => toggleCategory(item.category_id || '')}
-                >
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={selectedCategories.has(item.category_id || '')}
-                      onCheckedChange={() => toggleCategory(item.category_id || '')}
-                    />
-                    <span className="font-medium text-sm">{item.name}</span>
-                  </div>
-                  <span className="font-semibold text-sm">{formatCurrency(item.amount)}</span>
+              {/* Fixed Expenses */}
+              {allItems.fixed.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Fasta kostnader</h4>
+                  {allItems.fixed.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer",
+                        selectedCategories.has(item.category_id || '')
+                          ? "bg-stacka-sage/30"
+                          : "bg-muted/50 hover:bg-muted"
+                      )}
+                      onClick={() => toggleCategory(item.category_id || '')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedCategories.has(item.category_id || '')}
+                          onCheckedChange={() => toggleCategory(item.category_id || '')}
+                        />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-sm">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {/* Variable Expenses */}
+              {allItems.variable.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rörliga kostnader</h4>
+                  {allItems.variable.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer",
+                        selectedCategories.has(item.category_id || '')
+                          ? "bg-stacka-sage/30"
+                          : "bg-muted/50 hover:bg-muted"
+                      )}
+                      onClick={() => toggleCategory(item.category_id || '')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedCategories.has(item.category_id || '')}
+                          onCheckedChange={() => toggleCategory(item.category_id || '')}
+                        />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-sm">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Savings */}
+              {allItems.savings.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sparande</h4>
+                  {allItems.savings.map((item) => (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer",
+                        selectedCategories.has(item.category_id || '')
+                          ? "bg-stacka-sage/30"
+                          : "bg-muted/50 hover:bg-muted"
+                      )}
+                      onClick={() => toggleCategory(item.category_id || '')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedCategories.has(item.category_id || '')}
+                          onCheckedChange={() => toggleCategory(item.category_id || '')}
+                        />
+                        <span className="font-medium text-sm">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-sm">{formatCurrency(item.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

@@ -10,16 +10,16 @@ import { cn } from '@/lib/utils/cn'
 interface KPICardsProps {
   totalBudget: number
   totalSpent: number
-  savingsRate: number
+  savingsRate: number  // Budget savings rate (planned)
   salaryDay: number
   hasBudget: boolean
   totalIncome: number
 }
 
-export function KPICards({ 
-  totalBudget, 
-  totalSpent, 
-  savingsRate, 
+export function KPICards({
+  totalBudget,
+  totalSpent,
+  savingsRate,
   salaryDay,
   hasBudget,
   totalIncome
@@ -29,7 +29,11 @@ export function KPICards({
   const periodProgress = getPeriodProgress(salaryDay)
   const dailyBudget = daysUntilSalary > 0 ? remaining / daysUntilSalary : 0
   const spentPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
-  
+
+  // Calculate actual savings rate based on spending
+  // Actual = (income - spent) / income * 100
+  const actualSavingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0
+
   // Check if overspent or on track
   const isOverBudget = spentPercentage > periodProgress
   
@@ -67,11 +71,13 @@ export function KPICards({
     },
     {
       label: 'Sparkvot',
-      value: hasBudget ? formatPercentage(savingsRate) : '—',
-      subtext: hasBudget ? 'av inkomst' : 'Skapa budget',
+      value: formatPercentage(actualSavingsRate),
+      subtext: hasBudget
+        ? `Budget: ${formatPercentage(savingsRate)}`
+        : 'Faktisk sparkvot',
       icon: PiggyBank,
-      color: savingsRate >= 10 ? 'text-success' : 'text-muted-foreground',
-      bgColor: savingsRate >= 10 ? 'bg-success/10' : 'bg-muted/50',
+      color: actualSavingsRate >= 10 ? 'text-success' : actualSavingsRate >= 0 ? 'text-muted-foreground' : 'text-destructive',
+      bgColor: actualSavingsRate >= 10 ? 'bg-success/10' : actualSavingsRate >= 0 ? 'bg-muted/50' : 'bg-destructive/10',
       cardBg: 'bg-gradient-to-br from-stacka-sage/30 to-white dark:from-stacka-sage/10 dark:to-card',
     },
   ]

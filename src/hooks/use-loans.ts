@@ -530,29 +530,38 @@ export function useCreateExpensesFromLoans() {
       }
 
       if (expenses.length === 0) {
-        return { created: 0, skipped: loans.length * 2, message: 'Alla utgifter finns redan för denna period' }
+        return { created: 0, skipped: loans.length * 2, loansUpdated: 0, message: 'Alla utgifter finns redan för denna period' }
       }
 
       // Insert expenses
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: insertError } = await (supabase.from('expenses') as any).insert(expenses)
-      if (insertError) throw insertError
+      if (insertError) {
+        throw new Error(`Kunde inte skapa utgifter: ${insertError.message}`)
+      }
 
       // Update loan balances
+      let loansUpdatedCount = 0
       for (const loanUpdate of loansToUpdate) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('loans') as any)
+        const { error: loanUpdateError } = await (supabase.from('loans') as any)
           .update({
             current_balance: loanUpdate.newBalance,
             last_amortization_date: date,
           })
           .eq('id', loanUpdate.id)
+
+        if (loanUpdateError) {
+          console.error(`Failed to update loan ${loanUpdate.id}:`, loanUpdateError)
+        } else {
+          loansUpdatedCount++
+        }
       }
 
       return {
         created: expenses.length,
         skipped: (loans.length * 2) - expenses.length,
-        loansUpdated: loansToUpdate.length
+        loansUpdated: loansUpdatedCount
       }
     },
     onSuccess: () => {
