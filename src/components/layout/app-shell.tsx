@@ -27,7 +27,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main content area */}
       <div
         className={cn(
-          'min-h-screen',
+          'min-h-[100dvh]', // Use dynamic viewport height for consistent behavior with browser chrome
           'pb-24 md:pb-8',
           'md:pl-64'
         )}
