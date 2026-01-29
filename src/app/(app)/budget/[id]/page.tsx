@@ -1,11 +1,11 @@
 'use client'
 
-import { use, useMemo } from 'react'
+import { use, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useBudget, useDeleteBudget } from '@/hooks/use-budgets'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
-import { useUser } from '@/hooks/use-user'
+import { useUser, usePartner } from '@/hooks/use-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -14,14 +14,17 @@ import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
-import { 
-  ArrowLeft, 
-  Edit2, 
-  Trash2, 
-  PiggyBank, 
+import {
+  ArrowLeft,
+  Edit2,
+  Trash2,
+  PiggyBank,
   TrendingDown,
   Wallet,
-  AlertTriangle
+  AlertTriangle,
+  Users,
+  User,
+  UserCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { BudgetItem } from '@/types'
@@ -37,16 +40,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
+type BudgetViewMode = 'total' | 'mine' | 'partner'
+
 export default function BudgetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
   const { data: user } = useUser()
+  const { data: partner } = usePartner()
   const { data: budget, isLoading } = useBudget(id)
   const deleteBudget = useDeleteBudget()
-  
+  const [viewMode, setViewMode] = useState<BudgetViewMode>('total')
+
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
   const { data: expenses } = useExpensesByPeriod(budget?.period || '', salaryDay)
+  const hasPartner = !!partner
 
   // Group budget items by type
   const groupedItems = useMemo(() => {
@@ -59,10 +67,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     }
   }, [budget])
 
-  // Calculate actual spending per category (considering cost assignment)
-  // - personal: full amount (user pays 100%)
-  // - shared: 50% (split with partner)
-  // - partner: 0% (partner pays, not counted toward user's budget)
+  // Calculate actual spending per category based on view mode
+  // - total: all expenses at full amount (household view)
+  // - mine: personal (100%) + shared (50%) + partner (0%)
+  // - partner: partner (100%) + shared (50%) + personal (0%)
   const actualSpending = useMemo(() => {
     if (!expenses) return {}
 
@@ -70,20 +78,34 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       const categoryId = expense.category_id
       const assignment = expense.cost_assignment || 'personal'
 
-      // Calculate user's share based on cost assignment
-      let userShare = 0
-      if (assignment === 'personal') {
-        userShare = expense.amount // Full amount
-      } else if (assignment === 'shared') {
-        userShare = expense.amount / 2 // 50/50 split
+      let amount = 0
+
+      if (viewMode === 'total') {
+        // Total view: count all expenses at full amount
+        amount = expense.amount
+      } else if (viewMode === 'mine') {
+        // My view: personal (100%), shared (50%), partner (0%)
+        if (assignment === 'personal') {
+          amount = expense.amount
+        } else if (assignment === 'shared') {
+          amount = expense.amount / 2
+        }
+        // partner = 0
+      } else if (viewMode === 'partner') {
+        // Partner view: partner (100%), shared (50%), personal (0%)
+        if (assignment === 'partner') {
+          amount = expense.amount
+        } else if (assignment === 'shared') {
+          amount = expense.amount / 2
+        }
+        // personal = 0
       }
-      // partner = 0 (not counted)
 
       if (!acc[categoryId]) acc[categoryId] = 0
-      acc[categoryId] += userShare
+      acc[categoryId] += amount
       return acc
     }, {} as Record<string, number>)
-  }, [expenses])
+  }, [expenses, viewMode])
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -184,6 +206,55 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           </AlertDialogContent>
         </AlertDialog>
       </motion.div>
+
+      {/* View Mode Toggle - only show when partner exists */}
+      {hasPartner && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="flex justify-center"
+        >
+          <div className="inline-flex rounded-lg bg-muted p-1">
+            <button
+              onClick={() => setViewMode('total')}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                viewMode === 'total'
+                  ? "bg-white text-stacka-olive shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Users className="w-3.5 h-3.5" />
+              Total
+            </button>
+            <button
+              onClick={() => setViewMode('mine')}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                viewMode === 'mine'
+                  ? "bg-white text-stacka-olive shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <User className="w-3.5 h-3.5" />
+              Min
+            </button>
+            <button
+              onClick={() => setViewMode('partner')}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
+                viewMode === 'partner'
+                  ? "bg-white text-stacka-olive shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Partner
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Overview Card */}
       <motion.div

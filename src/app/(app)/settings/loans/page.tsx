@@ -38,6 +38,11 @@ export default function LoansSettingsPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [createExpensesOpen, setCreateExpensesOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  // Default expense date to 1st of current month
+  const [expenseDate, setExpenseDate] = useState(() => {
+    const now = new Date()
+    return format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd')
+  })
 
   const { data: user } = useUser()
 
@@ -55,7 +60,7 @@ export default function LoansSettingsPage() {
       const result = await createExpensesFromLoans.mutateAsync({
         loans: ownLoans,
         period: currentPeriod.period,
-        date: format(new Date(), 'yyyy-MM-dd'),
+        date: expenseDate,
       })
 
       setCreateExpensesOpen(false)
@@ -67,7 +72,8 @@ export default function LoansSettingsPage() {
       }
     } catch (error) {
       console.error('Failed to create expenses from loans:', error)
-      toast.error('Kunde inte skapa utgifter från lån')
+      const errorMessage = error instanceof Error ? error.message : 'Kunde inte skapa utgifter från lån'
+      toast.error(errorMessage)
     }
   }
 
@@ -479,6 +485,17 @@ export default function LoansSettingsPage() {
                   <li>• <strong>Ränta bolån</strong> - Räntekostnad för varje lån</li>
                   <li>• <strong>Amortering</strong> - Amortering för varje lån (om &gt; 0)</li>
                 </ul>
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-foreground mb-1.5">
+                    Datum för utgifter
+                  </label>
+                  <input
+                    type="date"
+                    value={expenseDate}
+                    onChange={(e) => setExpenseDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md bg-background text-foreground"
+                  />
+                </div>
                 <p className="text-sm">
                   Lånens kvarvarande belopp uppdateras automatiskt med amorteringsbeloppet.
                 </p>
