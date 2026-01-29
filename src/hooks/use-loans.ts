@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import type { Loan, LoanWithGroup, LoanInterestHistory } from '@/types'
+import type { Loan, LoanWithGroup, LoanInterestHistory, Category } from '@/types'
 import type { InsertTables, UpdateTables } from '@/types/database'
 
 // Extended type for loans with owner information
@@ -414,12 +414,13 @@ export function useCreateExpensesFromLoans() {
       if (!user) throw new Error('Not authenticated')
 
       // Get user's categories
-      const { data: categories, error: catError } = await supabase
+      const { data: categoriesData, error: catError } = await supabase
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
 
       if (catError) throw catError
+      const categories = categoriesData as Category[] | null
 
       // Find or create "Ränta bolån" category
       let interestCategory = categories?.find(c => c.name === 'Ränta bolån')
@@ -458,7 +459,7 @@ export function useCreateExpensesFromLoans() {
       }
 
       // Check for existing loan expenses in this period to prevent duplicates
-      const { data: existingExpenses, error: existingError } = await supabase
+      const { data: existingExpensesData, error: existingError } = await supabase
         .from('expenses')
         .select('id, description, category_id')
         .eq('user_id', user.id)
@@ -467,6 +468,7 @@ export function useCreateExpensesFromLoans() {
         .in('category_id', [interestCategory?.id, amortizationCategory?.id].filter(Boolean))
 
       if (existingError) throw existingError
+      const existingExpenses = existingExpensesData as Array<{ id: string; description: string; category_id: string }> | null
 
       const expenses: Array<{
         user_id: string
