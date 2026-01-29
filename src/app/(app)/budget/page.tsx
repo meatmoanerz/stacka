@@ -1,9 +1,11 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
 import { useBudgets } from '@/hooks/use-budgets'
+import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useUser } from '@/hooks/use-user'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { BudgetListSkeleton } from '@/components/budget/budget-list-skeleton'
@@ -113,11 +115,12 @@ export default function BudgetListPage() {
       ) : (
         <div className="space-y-3">
           {budgets.map((budget, index) => (
-            <BudgetCard 
-              key={budget.id} 
-              budget={budget} 
+            <BudgetCard
+              key={budget.id}
+              budget={budget}
               index={index}
               isCurrent={budget.period === currentPeriod.period}
+              salaryDay={salaryDay}
             />
           ))}
         </div>
@@ -126,10 +129,33 @@ export default function BudgetListPage() {
   )
 }
 
-function BudgetCard({ budget, index, isCurrent }: { budget: Budget; index: number; isCurrent: boolean }) {
-  const spentRatio = budget.total_income > 0 
-    ? ((budget.total_expenses) / budget.total_income) * 100 
+function BudgetCard({ budget, index, isCurrent, salaryDay }: { budget: Budget; index: number; isCurrent: boolean; salaryDay: number }) {
+  // Fetch actual expenses for this period
+  const { data: expenses } = useExpensesByPeriod(budget.period, salaryDay)
+
+  // Calculate actual spending from expenses (considering cost assignment)
+  const actualSpent = useMemo(() => {
+    if (!expenses) return 0
+
+    return expenses.reduce((sum, expense) => {
+      const assignment = expense.cost_assignment || 'personal'
+
+      if (assignment === 'personal') {
+        return sum + expense.amount
+      } else if (assignment === 'shared') {
+        return sum + expense.amount / 2
+      }
+      // partner = 0 (not counted)
+      return sum
+    }, 0)
+  }, [expenses])
+
+  const spentRatio = budget.total_income > 0
+    ? (actualSpent / budget.total_income) * 100
     : 0
+
+  // Calculate remaining (income - actual spent - savings budgeted)
+  const remaining = budget.total_income - actualSpent - (budget.total_savings || 0)
 
   return (
     <motion.div
@@ -154,12 +180,12 @@ function BudgetCard({ budget, index, isCurrent }: { budget: Budget; index: numbe
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Förbrukat</span>
                 <span className="font-medium">
-                  {formatCurrency(budget.total_expenses)} / {formatCurrency(budget.total_income)}
+                  {formatCurrency(actualSpent)} / {formatCurrency(budget.total_income)}
                 </span>
               </div>
               <Progress value={Math.min(spentRatio, 100)} className="h-2" />
@@ -167,7 +193,9 @@ function BudgetCard({ budget, index, isCurrent }: { budget: Budget; index: numbe
 
             <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
               <span>Sparkvot: {formatPercentage(budget.savings_ratio)}</span>
-              <span>Kvar: {formatCurrency(budget.net_balance)}</span>
+              <span className={cn(remaining < 0 && "text-destructive")}>
+                Kvar: {formatCurrency(remaining)}
+              </span>
             </div>
           </CardContent>
         </Card>

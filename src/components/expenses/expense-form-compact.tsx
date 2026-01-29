@@ -5,8 +5,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { useCreateExpense } from '@/hooks/use-expenses'
 import { useCategoriesByType } from '@/hooks/use-categories'
 import { useUser, usePartner } from '@/hooks/use-user'
@@ -110,7 +108,7 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
         ...data,
         user_id: user?.id || '',
       })
-      toast.success('Utgift sparad! 💰')
+      toast.success('Utgift sparad!')
       setAmountDisplay('')
       form.reset({
         amount: 0,
@@ -126,7 +124,11 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
     }
   }
 
-  // Category groups for chips
+  // Category groups for chips - show first 3 from variable (most common)
+  const quickCategories = useMemo(() => {
+    return variable.slice(0, 6)
+  }, [variable])
+
   const categoryGroups = [
     { label: 'Rörligt', items: variable },
     { label: 'Fast', items: fixed },
@@ -134,95 +136,96 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
   ]
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-      {/* Row 1: Amount + Description (side by side) */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Amount - Compact */}
-        <div className="rounded-xl bg-stacka-sage/20 p-3">
-          <div className="flex items-baseline gap-1">
-            <input
-              ref={amountInputRef}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="0"
-              value={amountDisplay}
-              onChange={handleAmountChange}
-              className="text-2xl font-bold bg-transparent placeholder:text-muted-foreground/30 caret-stacka-olive tabular-nums text-right w-full"
-              style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
-              autoFocus
-            />
-            <span className="text-sm text-muted-foreground font-medium shrink-0">kr</span>
-          </div>
-          {form.formState.errors.amount && (
-            <p className="text-destructive text-[10px] mt-1">{form.formState.errors.amount.message}</p>
-          )}
-        </div>
-
-        {/* Description - Compact */}
-        <div className="flex flex-col justify-center">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      {/* Row 1: Amount - larger and more prominent */}
+      <div className="rounded-2xl bg-gradient-to-br from-stacka-sage/30 to-stacka-mint/20 p-4">
+        <div className="flex items-center justify-center gap-2">
           <input
-            placeholder="Beskrivning"
-            {...form.register('description')}
-            className="w-full h-full px-3 rounded-xl bg-muted text-sm placeholder:text-muted-foreground/50"
-            style={{ outline: 'none', boxShadow: 'none' }}
+            ref={amountInputRef}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={amountDisplay}
+            onChange={handleAmountChange}
+            className="text-4xl font-bold bg-transparent placeholder:text-muted-foreground/30 caret-stacka-olive tabular-nums text-center w-full max-w-[200px]"
+            style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
+            autoFocus
           />
+          <span className="text-lg text-muted-foreground font-medium">kr</span>
         </div>
+        {form.formState.errors.amount && (
+          <p className="text-destructive text-xs mt-2 text-center">{form.formState.errors.amount.message}</p>
+        )}
       </div>
 
-      {/* Row 2: Category chips (scrollable) */}
+      {/* Row 2: Description */}
+      <input
+        placeholder="Vad handlade det om?"
+        {...form.register('description')}
+        className="w-full h-12 px-4 rounded-xl bg-muted text-base placeholder:text-muted-foreground/50"
+        style={{ outline: 'none', boxShadow: 'none' }}
+      />
+      {form.formState.errors.description && (
+        <p className="text-destructive text-xs -mt-3">{form.formState.errors.description.message}</p>
+      )}
+
+      {/* Row 3: Category chips */}
       <div ref={categoryDropdownRef} className="relative">
-        <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {categoryGroups.map((group) => (
-            group.items.slice(0, 4).map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => handleCategorySelect(cat)}
-                className={cn(
-                  "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                  form.watch('category_id') === cat.id
-                    ? "bg-stacka-olive text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
-              >
-                {cat.name}
-              </button>
-            ))
+        <div className="flex gap-2 flex-wrap">
+          {quickCategories.map((cat) => (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => handleCategorySelect(cat)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                form.watch('category_id') === cat.id
+                  ? "bg-stacka-olive text-white shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {cat.name}
+            </button>
           ))}
           <button
             type="button"
             onClick={() => setCategoryOpen(!categoryOpen)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-muted text-muted-foreground hover:bg-muted/80 flex items-center gap-1"
+            className={cn(
+              "px-4 py-2 rounded-xl text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 flex items-center gap-1.5",
+              selectedCategory && !quickCategories.find(c => c.id === selectedCategory.id) && "bg-stacka-olive text-white"
+            )}
           >
-            Fler
-            <ChevronDown className={cn("w-3 h-3 transition-transform", categoryOpen && "rotate-180")} />
+            {selectedCategory && !quickCategories.find(c => c.id === selectedCategory.id)
+              ? selectedCategory.name
+              : 'Fler'}
+            <ChevronDown className={cn("w-4 h-4 transition-transform", categoryOpen && "rotate-180")} />
           </button>
         </div>
 
         {/* Dropdown for all categories */}
         {categoryOpen && (
-          <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-48 overflow-y-auto">
+          <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-56 overflow-y-auto">
             {categoryGroups.map((group) => (
               group.items.length > 0 && (
                 <div key={group.label}>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 uppercase">
+                  <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50 uppercase sticky top-0">
                     {group.label}
                   </div>
-                  <div className="grid grid-cols-2 gap-0.5 p-1">
+                  <div className="grid grid-cols-2 gap-1 p-2">
                     {group.items.map((cat) => (
                       <button
                         key={cat.id}
                         type="button"
                         onClick={() => handleCategorySelect(cat)}
                         className={cn(
-                          "px-2 py-1.5 text-left text-xs rounded hover:bg-muted/50 flex items-center justify-between",
+                          "px-3 py-2 text-left text-sm rounded-lg hover:bg-muted/50 flex items-center justify-between",
                           form.watch('category_id') === cat.id && "bg-stacka-sage/30"
                         )}
                       >
                         <span>{cat.name}</span>
                         {form.watch('category_id') === cat.id && (
-                          <Check className="w-3 h-3 text-stacka-olive" />
+                          <Check className="w-4 h-4 text-stacka-olive" />
                         )}
                       </button>
                     ))}
@@ -233,19 +236,19 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
           </div>
         )}
         {form.formState.errors.category_id && (
-          <p className="text-destructive text-[10px] mt-1">{form.formState.errors.category_id.message}</p>
+          <p className="text-destructive text-xs mt-2">{form.formState.errors.category_id.message}</p>
         )}
       </div>
 
-      {/* Row 3: Date + Cost Assignment + CCM (horizontal) */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Date - Compact button */}
+      {/* Row 4: Date + Cost Assignment + CCM (horizontal, well spaced) */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Date */}
         <button
           type="button"
           onClick={() => dateInputRef.current?.showPicker?.()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-xs"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-muted text-sm font-medium"
         >
-          <Calendar className="w-3 h-3 text-muted-foreground" />
+          <Calendar className="w-4 h-4 text-muted-foreground" />
           {formatDisplayDate(form.watch('date'))}
         </button>
         <input
@@ -256,26 +259,26 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
           className="sr-only"
         />
 
-        {/* Cost Assignment - Radio-style buttons */}
+        {/* Cost Assignment */}
         {hasPartner && (
-          <div className="flex rounded-lg bg-muted p-0.5">
+          <div className="flex rounded-xl bg-muted p-1">
             <button
               type="button"
               onClick={() => form.setValue('cost_assignment', 'personal')}
               className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium transition-all",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
                 form.watch('cost_assignment') === 'personal'
                   ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                   : "text-muted-foreground"
               )}
             >
-              {user?.first_name?.slice(0, 3) || 'Jag'}
+              {user?.first_name?.slice(0, 4) || 'Jag'}
             </button>
             <button
               type="button"
               onClick={() => form.setValue('cost_assignment', 'shared')}
               className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium transition-all",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
                 form.watch('cost_assignment') === 'shared'
                   ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                   : "text-muted-foreground"
@@ -287,48 +290,47 @@ export function ExpenseFormCompact({ onSuccess }: ExpenseFormCompactProps) {
               type="button"
               onClick={() => form.setValue('cost_assignment', 'partner')}
               className={cn(
-                "px-2 py-1 rounded text-[10px] font-medium transition-all",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
                 form.watch('cost_assignment') === 'partner'
                   ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                   : "text-muted-foreground"
               )}
             >
-              {partner?.first_name?.slice(0, 3) || 'P'}
+              {partner?.first_name?.slice(0, 4) || 'P'}
             </button>
           </div>
         )}
 
-        {/* CCM Toggle - Compact */}
+        {/* CCM Toggle */}
         {isCCMEnabled && (
           <button
             type="button"
             onClick={() => form.setValue('is_ccm', !form.watch('is_ccm'))}
             className={cn(
-              "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-all",
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
               form.watch('is_ccm')
                 ? "bg-stacka-coral/20 text-stacka-coral"
                 : "bg-muted text-muted-foreground"
             )}
           >
-            <CreditCard className="w-3 h-3" />
-            CCM
+            <CreditCard className="w-4 h-4" />
+            Kreditkort
           </button>
         )}
-
-        {/* Submit - Compact but prominent */}
-        <Button
-          type="submit"
-          size="sm"
-          className="ml-auto h-8 px-4"
-          disabled={createExpense.isPending}
-        >
-          {createExpense.isPending ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            'Spara'
-          )}
-        </Button>
       </div>
+
+      {/* Submit Button - full width, prominent */}
+      <Button
+        type="submit"
+        className="w-full h-12 text-base font-semibold"
+        disabled={createExpense.isPending}
+      >
+        {createExpense.isPending ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          'Spara utgift'
+        )}
+      </Button>
     </form>
   )
 }

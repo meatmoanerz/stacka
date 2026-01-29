@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { LoadingPage } from '@/components/shared/loading-spinner'
 import { getInitials } from '@/lib/utils/formatters'
 import { motion } from 'framer-motion'
@@ -23,7 +22,8 @@ import {
   HelpCircle,
   Shield,
   Palette,
-  FileSearch
+  FileSearch,
+  Wallet
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -43,6 +43,7 @@ const menuItems = [
       { href: '/settings/loans', label: 'Lån', icon: Landmark, description: 'Lån och skulder' },
       { href: '/settings/ccm', label: 'Kreditkortshanterare', icon: CreditCard, description: 'CCM-inställningar' },
       { href: '/savings', label: 'Sparmål', icon: Target, description: 'Dina besparingsmål' },
+      { href: '/settings/shared-account', label: 'Gemensamt konto', icon: Wallet, description: 'Beräkna överföring' },
     ]
   },
   {
