@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useUser } from '@/hooks/use-user'
+import { useUser, usePartner } from '@/hooks/use-user'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useHouseholdIncome } from '@/hooks/use-incomes'
 import { useMonthlyIncomeTotal } from '@/hooks/use-monthly-incomes'
@@ -13,6 +13,7 @@ import { BudgetOverview } from '@/components/dashboard/budget-overview'
 import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentExpenses } from '@/components/dashboard/recent-expenses'
 import { RecurringExpensesWidget } from '@/components/dashboard/recurring-expenses-widget'
+import { PersonBudgetBreakdown } from '@/components/dashboard/person-budget-breakdown'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
 import { motion } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
@@ -20,8 +21,10 @@ import { createClient } from '@/lib/supabase/client'
 export default function DashboardPage() {
   const [setupDone, setSetupDone] = useState(false)
   const { data: user, isLoading: userLoading } = useUser()
+  const { data: partner } = usePartner()
   const { data: categories, refetch: refetchCategories } = useCategories()
   const supabase = createClient()
+  const hasPartner = !!partner
 
   // Auto-setup: Create categories if they don't exist
   useEffect(() => {
@@ -84,16 +87,28 @@ export default function DashboardPage() {
   const totalIncome = monthlyTotal > 0
     ? monthlyTotal
     : (householdIncome?.total_income ?? 0)
-  
-  // Calculate total spent considering cost assignment
+
+  // Calculate TOTAL spent (household view - sum of all expenses)
+  // When partners are connected, dashboard shows total household expenses
+  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+
+  // Calculate user's portion of expenses (for per-person breakdown)
   // - personal: full amount
   // - shared: 50% of the amount (split with partner)
   // - partner: 0 (doesn't count toward user's budget, partner pays)
-  const totalSpent = expenses.reduce((sum, exp) => {
+  const userSpent = expenses.reduce((sum, exp) => {
     const assignment = exp.cost_assignment || 'personal'
     if (assignment === 'partner') return sum // Partner pays, not user
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
     return sum + exp.amount // personal - full amount
+  }, 0)
+
+  // Calculate partner's portion of expenses
+  const partnerSpent = expenses.reduce((sum, exp) => {
+    const assignment = exp.cost_assignment || 'personal'
+    if (assignment === 'personal') return sum // User pays, not partner
+    if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
+    return sum + exp.amount // partner - full amount
   }, 0)
   
   // Calculate budget amounts by type
@@ -139,7 +154,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* KPI Cards */}
-      <KPICards 
+      <KPICards
         totalBudget={availableToSpend}
         totalSpent={totalSpent}
         savingsRate={savingsRate}
@@ -147,6 +162,24 @@ export default function DashboardPage() {
         hasBudget={hasBudget}
         totalIncome={totalIncome}
       />
+
+      {/* Per-person breakdown - only show when partner is connected */}
+      {hasPartner && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <PersonBudgetBreakdown
+            userName={user?.first_name || 'Du'}
+            partnerName={partner?.first_name || 'Partner'}
+            userSpent={userSpent}
+            partnerSpent={partnerSpent}
+            userBudget={availableToSpend / 2}
+            partnerBudget={availableToSpend / 2}
+          />
+        </motion.div>
+      )}
 
       {/* Charts Row */}
       <div className="grid gap-4 md:grid-cols-2">

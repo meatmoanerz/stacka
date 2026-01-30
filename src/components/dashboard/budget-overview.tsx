@@ -17,23 +17,11 @@ interface BudgetOverviewProps {
 }
 
 function BudgetOverviewContent({ expenses, budgetItems }: BudgetOverviewProps) {
-  // Calculate spent by category type (respecting cost assignment)
-  // - personal: 100% counts toward user
-  // - shared: 50% counts toward user (split with partner)
-  // - partner: 0% (partner pays, doesn't count toward user's budget)
+  // Calculate spent by category type (TOTAL household expenses)
+  // When partners are connected, show total expenses, not user's portion
   const spentByType = expenses.reduce((acc, expense) => {
     const type = expense.category?.cost_type || 'Variable'
-    const assignment = expense.cost_assignment || 'personal'
-
-    let userShare = 0
-    if (assignment === 'personal') {
-      userShare = expense.amount
-    } else if (assignment === 'shared') {
-      userShare = expense.amount / 2
-    }
-    // partner = 0 (not counted)
-
-    acc[type] = (acc[type] || 0) + userShare
+    acc[type] = (acc[type] || 0) + expense.amount
     return acc
   }, {} as Record<string, number>)
 

@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { LoadingPage } from '@/components/shared/loading-spinner'
-import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
+import { formatCurrency, formatPercentage, formatDate } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
 import { toast } from 'sonner'
 import { motion } from 'framer-motion'
@@ -24,10 +24,11 @@ import {
   AlertTriangle,
   Users,
   User,
-  UserCheck
+  UserCheck,
+  ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { BudgetItem } from '@/types'
+import type { BudgetItem, ExpenseWithCategory } from '@/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 
 type BudgetViewMode = 'total' | 'mine' | 'partner'
 
@@ -50,6 +58,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const { data: budget, isLoading } = useBudget(id)
   const deleteBudget = useDeleteBudget()
   const [viewMode, setViewMode] = useState<BudgetViewMode>('total')
+  const [selectedCategory, setSelectedCategory] = useState<BudgetItem | null>(null)
+  const [selectedExpense, setSelectedExpense] = useState<ExpenseWithCategory | null>(null)
+  const [expenseEditOpen, setExpenseEditOpen] = useState(false)
 
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
@@ -128,6 +139,38 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       totalActual: fixedActual + variableActual,
     }
   }, [groupedItems, actualSpending])
+
+  // Get expenses filtered by category and view mode
+  const getExpensesForCategory = (categoryId: string) => {
+    if (!expenses) return []
+
+    return expenses.filter(expense => {
+      // Filter by category
+      if (expense.category_id !== categoryId) return false
+
+      // Filter by view mode
+      const assignment = expense.cost_assignment || 'personal'
+      if (viewMode === 'total') return true
+      if (viewMode === 'mine') {
+        return assignment === 'personal' || assignment === 'shared'
+      }
+      if (viewMode === 'partner') {
+        return assignment === 'partner' || assignment === 'shared'
+      }
+      return true
+    })
+  }
+
+  // Handle category click for drill-down
+  const handleCategoryClick = (item: BudgetItem) => {
+    setSelectedCategory(item)
+  }
+
+  // Handle expense click for editing
+  const handleExpenseClick = (expense: ExpenseWithCategory) => {
+    setSelectedExpense(expense)
+    setExpenseEditOpen(true)
+  }
 
   async function handleDelete() {
     try {
@@ -238,7 +281,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               )}
             >
               <User className="w-3.5 h-3.5" />
-              Min
+              {user?.first_name || 'Du'}
             </button>
             <button
               onClick={() => setViewMode('partner')}
@@ -250,7 +293,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               )}
             >
               <UserCheck className="w-3.5 h-3.5" />
-              Partner
+              {partner?.first_name || 'Partner'}
             </button>
           </div>
         </motion.div>
@@ -330,6 +373,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           budgetedTotal={totals.fixedBudgeted}
           actualTotal={totals.fixedActual}
           delay={0.15}
+          onCategoryClick={handleCategoryClick}
         />
       )}
 
@@ -343,6 +387,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           budgetedTotal={totals.variableBudgeted}
           actualTotal={totals.variableActual}
           delay={0.2}
+          onCategoryClick={handleCategoryClick}
         />
       )}
 
@@ -357,8 +402,88 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           actualTotal={totals.savingsActual}
           delay={0.25}
           accentColor="success"
+          onCategoryClick={handleCategoryClick}
         />
       )}
+
+      {/* Category Drill-down Dialog */}
+      <Dialog open={!!selectedCategory} onOpenChange={(open) => !open && setSelectedCategory(null)}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedCategory?.name}</span>
+              <span className="text-sm font-normal text-muted-foreground">
+                {selectedCategory && formatCurrency(actualSpending[selectedCategory.category_id || ''] || 0)} / {selectedCategory && formatCurrency(selectedCategory.amount)}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+            {selectedCategory && (() => {
+              const categoryExpenses = getExpensesForCategory(selectedCategory.category_id || '')
+              if (categoryExpenses.length === 0) {
+                return (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p>Inga utgifter i denna kategori</p>
+                    <p className="text-xs mt-1">
+                      {viewMode !== 'total' && '(för vald vy)'}
+                    </p>
+                  </div>
+                )
+              }
+              return (
+                <div className="space-y-2 pb-4">
+                  {categoryExpenses.map((expense) => (
+                    <div
+                      key={expense.id}
+                      onClick={() => handleExpenseClick(expense)}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{expense.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(expense.date)}
+                          {expense.cost_assignment === 'shared' && (
+                            <span className="ml-2 inline-flex items-center gap-1">
+                              <Users className="w-3 h-3" /> Delad
+                            </span>
+                          )}
+                          {expense.cost_assignment === 'partner' && (
+                            <span className="ml-2 inline-flex items-center gap-1">
+                              <UserCheck className="w-3 h-3" /> {partner?.first_name || 'Partner'}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">
+                          {formatCurrency(
+                            viewMode === 'total'
+                              ? expense.amount
+                              : expense.cost_assignment === 'shared'
+                                ? expense.amount / 2
+                                : expense.amount
+                          )}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expense Edit Dialog */}
+      <ExpenseEditDialog
+        expense={selectedExpense}
+        open={expenseEditOpen}
+        onOpenChange={(open) => {
+          setExpenseEditOpen(open)
+          if (!open) setSelectedExpense(null)
+        }}
+      />
     </div>
   )
 }
@@ -372,6 +497,7 @@ interface BudgetSectionProps {
   actualTotal: number
   delay: number
   accentColor?: 'default' | 'success'
+  onCategoryClick?: (item: BudgetItem) => void
 }
 
 function BudgetSection({
@@ -383,6 +509,7 @@ function BudgetSection({
   actualTotal,
   delay,
   accentColor = 'default',
+  onCategoryClick,
 }: BudgetSectionProps) {
   const percentage = budgetedTotal > 0 ? (actualTotal / budgetedTotal) * 100 : 0
   const isOverBudget = percentage > 100
@@ -429,22 +556,34 @@ function BudgetSection({
             const itemOverBudget = itemPercentage > 100
 
             return (
-              <div key={item.id} className="space-y-1">
+              <div
+                key={item.id}
+                className={cn(
+                  "space-y-1 p-2 -mx-2 rounded-lg transition-colors",
+                  onCategoryClick && "cursor-pointer hover:bg-muted/50 active:bg-muted"
+                )}
+                onClick={() => onCategoryClick?.(item)}
+              >
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{item.name}</span>
-                  <span className={cn(
-                    "font-medium",
-                    itemOverBudget && "text-destructive"
-                  )}>
-                    {formatCurrency(actual)} / {formatCurrency(budgeted)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "font-medium",
+                      itemOverBudget && "text-destructive"
+                    )}>
+                      {formatCurrency(actual)} / {formatCurrency(budgeted)}
+                    </span>
+                    {onCategoryClick && (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
-                <Progress 
-                  value={Math.min(itemPercentage, 100)} 
+                <Progress
+                  value={Math.min(itemPercentage, 100)}
                   className={cn(
                     "h-1.5",
                     itemOverBudget && "[&>div]:bg-destructive"
-                  )} 
+                  )}
                 />
               </div>
             )

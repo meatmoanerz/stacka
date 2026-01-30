@@ -400,9 +400,7 @@ export function RecurringExpensesList() {
                             expense.is_ccm ? 'text-stacka-coral' : ''
                           )}
                         >
-                          {formatCurrency(
-                            expense.cost_assignment === 'shared' ? expense.amount / 2 : expense.amount
-                          )}
+                          {formatCurrency(expense.amount)}
                         </span>
                         <button
                           onClick={(e) => {
