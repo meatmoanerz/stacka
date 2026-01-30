@@ -458,13 +458,18 @@ export function useCreateExpensesFromLoans() {
         amortizationCategory = newCat
       }
 
+      // Calculate proper end of month date for the period
+      const [year, month] = period.split('-').map(Number)
+      const lastDayOfMonth = new Date(year, month, 0).getDate()
+      const periodEndDate = `${period}-${lastDayOfMonth.toString().padStart(2, '0')}`
+
       // Check for existing loan expenses in this period to prevent duplicates
       const { data: existingExpensesData, error: existingError } = await supabase
         .from('expenses')
         .select('id, description, category_id')
         .eq('user_id', user.id)
         .gte('date', `${period}-01`)
-        .lte('date', `${period}-31`)
+        .lte('date', periodEndDate)
         .in('category_id', [interestCategory?.id, amortizationCategory?.id].filter(Boolean))
 
       if (existingError) throw existingError

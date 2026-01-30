@@ -100,7 +100,7 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
                   "font-semibold",
                   expense.is_ccm ? "text-stacka-coral" : "text-foreground"
                 )}>
-                  -{formatCurrency(expense.cost_assignment === 'shared' ? expense.amount / 2 : expense.amount)}
+                  -{formatCurrency(expense.amount)}
                 </p>
                 {expense.is_ccm && (
                   <span className="text-[10px] text-stacka-coral">Kreditkort</span>

@@ -251,7 +251,7 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
           </div>
           
           {categoryOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
               {!hasFilteredResults ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
                   Ingen kategori hittades
@@ -330,23 +330,24 @@ export function ExpenseForm({ onSuccess }: ExpenseFormProps) {
         )}
       </div>
 
-      {/* Date - Simple click to open */}
+      {/* Date - Mobile-friendly date picker */}
       <div className="space-y-2">
         <Label className="text-muted-foreground text-sm">Datum</Label>
-        <button
-          type="button"
-          onClick={() => dateInputRef.current?.showPicker?.()}
-          className={cn(inputStyles, "text-left cursor-pointer")}
-        >
-          {formatDisplayDate(form.watch('date'))}
-        </button>
-        <input
-          ref={dateInputRef}
-          type="date"
-          value={form.watch('date')}
-          onChange={(e) => form.setValue('date', e.target.value)}
-          className="sr-only"
-        />
+        <div className="relative">
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={form.watch('date')}
+            onChange={(e) => form.setValue('date', e.target.value)}
+            className={cn(
+              inputStyles,
+              "cursor-pointer absolute inset-0 opacity-0 z-10"
+            )}
+          />
+          <div className={cn(inputStyles, "flex items-center pointer-events-none")}>
+            {formatDisplayDate(form.watch('date'))}
+          </div>
+        </div>
       </div>
 
       {/* Cost Assignment - Only show if partner is connected */}
