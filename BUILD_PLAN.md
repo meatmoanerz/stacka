@@ -630,9 +630,26 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-01-28
+**Senast uppdaterad:** 2026-01-30
 
-### Senaste ändringar (2026-01-28):
+### Senaste ändringar (2026-01-30):
+- ✅ **Budget-baserad "Kvar att spendera" beräkning:**
+  - Uppdaterad Dashboard och Budget-sidor för konsekvent beräkning
+  - "Kvar att spendera" = BudgetTotal - SpentTotal (budgetbaserat, inte kassaflödesbaserat)
+  - Sparande-kategorier exkluderas från SpentTotal (de är avsatta, inte spenderade)
+  - Konsekvent formel mellan Dashboard, BudgetCard och Budget-detaljsidan
+  - CCM-utgifter räknas i spenderingsmånaden (ingen dubbelräkning)
+
+- ✅ **Dark Mode styling-fixar:**
+  - Fixade dropdowns i monthly-income-form, recurring-expenses-list, savings-goal-form
+  - Fixade period-dropdown i budget/income-sidan
+  - Fixade input och kort i settings/ccm-sidan
+  - Fixade auth-sidorna (login, register) och onboarding-sidan
+  - Fixade progress-bars i savings-sidorna
+  - Fixade tab-knappar i expenses och savings-sidorna
+  - Fixade amber-varningsbox i ccm-sidan
+
+### Tidigare ändringar (2026-01-28):
 - ✅ **Statement Analyzer - Bulk-kategorisering:**
   - Ny `useBulkUpdateTransactionCategories` hook för att uppdatera flera transaktioner samtidigt
   - Kryssrutor alltid aktiverade (behöver inte längre välja kategori först)

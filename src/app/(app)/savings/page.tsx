@@ -105,7 +105,7 @@ export default function SavingsPage() {
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all duration-200",
                 activeTab === tab.id
-                  ? "bg-white shadow-sm text-stacka-olive"
+                  ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -204,7 +204,7 @@ export default function SavingsPage() {
                       {((totalSaved / totalTarget) * 100).toFixed(0)}%
                     </span>
                   </div>
-                  <div className="h-2 bg-white/50 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/50 dark:bg-card/50 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-stacka-olive rounded-full transition-all"
                       style={{ width: `${Math.min((totalSaved / totalTarget) * 100, 100)}%` }}

@@ -229,7 +229,7 @@ export function MonthlyIncomeForm({
           </div>
 
           {typeDropdownOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
               {filteredTypes.length === 0 ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
                   Ingen typ hittades

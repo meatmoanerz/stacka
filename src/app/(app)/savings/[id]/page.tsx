@@ -153,7 +153,7 @@ export default function SavingsGoalDetailPage({ params }: { params: Promise<{ id
                   <span className="text-muted-foreground">Progress</span>
                   <span className="font-medium">{progress.toFixed(0)}%</span>
                 </div>
-                <div className="h-3 bg-white/50 rounded-full overflow-hidden">
+                <div className="h-3 bg-white/50 dark:bg-card/50 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}

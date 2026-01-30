@@ -92,7 +92,7 @@ export default function AddExpensePage() {
             className={cn(
               "flex-1 flex items-center justify-center gap-2 py-2.5 px-3 min-h-[44px] rounded-lg text-sm font-medium transition-all duration-200 active:scale-[0.98]",
               activeTab === tab.id
-                ? "bg-white shadow-sm text-stacka-olive"
+                ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -137,7 +137,7 @@ export default function AddExpensePage() {
                   className={cn(
                     "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all active:scale-[0.98]",
                     filter === 'all'
-                      ? "bg-white shadow-sm text-stacka-olive"
+                      ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -148,7 +148,7 @@ export default function AddExpensePage() {
                   className={cn(
                     "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all flex items-center justify-center gap-1 active:scale-[0.98]",
                     filter === 'ccm'
-                      ? "bg-white shadow-sm text-stacka-coral"
+                      ? "bg-white dark:bg-card shadow-sm text-stacka-coral"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -160,7 +160,7 @@ export default function AddExpensePage() {
                   className={cn(
                     "flex-1 py-2.5 px-3 min-h-[44px] rounded-md text-xs font-medium transition-all active:scale-[0.98]",
                     filter === 'direct'
-                      ? "bg-white shadow-sm text-stacka-olive"
+                      ? "bg-white dark:bg-card shadow-sm text-stacka-olive"
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >

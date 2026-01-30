@@ -1575,6 +1575,8 @@ return useMutation({
 ## Project History
 
 **Version History:**
+- v0.3.2 (2026-01-30) - Budget-based "Kvar att spendera" calculation, dark mode fixes
+- v0.3.1 (2026-01-28) - Statement analyzer bulk categorization improvements
 - v0.1.2 (2026-01-25) - Monthly income feature with reminder popup
 - v0.1.1 (2026-01-21) - Security updates to Next.js
 - v0.1.0 (Initial) - Full budget/expense management system
@@ -1585,7 +1587,7 @@ return useMutation({
 
 ---
 
-**Last Updated:** 2026-01-25
+**Last Updated:** 2026-01-30
 
 **Maintainer:** Development Team
 

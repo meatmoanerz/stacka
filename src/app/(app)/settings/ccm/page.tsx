@@ -211,7 +211,7 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                         value={invoiceInput}
                         onChange={(e) => setInvoiceInput(e.target.value)}
                         placeholder="Ange belopp från fakturan"
-                        className="w-full h-10 px-3 rounded-lg bg-white text-sm border border-border"
+                        className="w-full h-10 px-3 rounded-lg bg-white dark:bg-input text-sm border border-border"
                         onClick={(e) => e.stopPropagation()}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr</span>
@@ -233,9 +233,9 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
 
                 {/* Warning if registered > actual */}
                 {paymentSplit.hasWarning && (
-                  <div className="mt-3 p-2 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2">
+                  <div className="mt-3 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                    <div className="text-xs text-amber-800">
+                    <div className="text-xs text-amber-800 dark:text-amber-200">
                       <p className="font-medium">Registrerat mer än fakturan</p>
                       <p>Du har registrerat {formatCurrency(paymentSplit.registeredTotal)} men fakturan är {formatCurrency(actualAmount)}. Kontrollera om något är dubbelregistrerat eller har fel datum.</p>
                     </div>
@@ -248,11 +248,11 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                 <div className="p-4 bg-stacka-blue/5 border-b">
                   <p className="text-xs font-medium text-muted-foreground mb-3">Betalningsfördelning</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-lg bg-white shadow-sm">
+                    <div className="p-3 rounded-lg bg-white dark:bg-card shadow-sm">
                       <p className="text-xs text-muted-foreground">{user.first_name || 'Du'}</p>
                       <p className="text-lg font-bold text-stacka-olive">{formatCurrency(paymentSplit.userAmount)}</p>
                     </div>
-                    <div className="p-3 rounded-lg bg-white shadow-sm">
+                    <div className="p-3 rounded-lg bg-white dark:bg-card shadow-sm">
                       <p className="text-xs text-muted-foreground">{partner.first_name || 'Partner'}</p>
                       <p className="text-lg font-bold text-stacka-olive">{formatCurrency(paymentSplit.partnerAmount)}</p>
                     </div>

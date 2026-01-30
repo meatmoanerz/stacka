@@ -470,7 +470,7 @@ export function RecurringExpensesList() {
                   <ChevronDown className="w-4 h-4" />
                 </div>
                 {categoryOpen && (
-                  <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
                     {filteredCategories.fixed.length > 0 && (
                       <div>
                         <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50">
@@ -527,7 +527,7 @@ export function RecurringExpensesList() {
                   <ChevronDown className="w-4 h-4" />
                 </div>
                 {dayPickerOpen && (
-                  <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto p-2">
+                  <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto p-2">
                     <div className="grid grid-cols-4 gap-1">
                       {dayOptions.map((day) => (
                         <button
