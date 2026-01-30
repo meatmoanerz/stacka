@@ -86,7 +86,7 @@ export default function LoginPage() {
           <p className="text-muted-foreground mt-1">Din personliga ekonomi</p>
         </div>
 
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur">
+        <Card className="border-0 shadow-xl bg-white/90 dark:bg-card/90 backdrop-blur">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-xl">Logga in</CardTitle>
             <CardDescription>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                 <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground">
+                <span className="bg-white dark:bg-card px-2 text-muted-foreground">
                   eller fortsätt med e-post
                 </span>
               </div>

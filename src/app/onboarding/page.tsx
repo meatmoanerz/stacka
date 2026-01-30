@@ -255,7 +255,7 @@ export default function OnboardingPage() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="border-0 shadow-xl bg-white/90 backdrop-blur">
+            <Card className="border-0 shadow-xl bg-white/90 dark:bg-card/90 backdrop-blur">
               <CardHeader className="text-center">
                 <div className="mx-auto w-12 h-12 rounded-full bg-stacka-sage/30 flex items-center justify-center mb-4">
                   {step === 0 && <User className="w-6 h-6 text-stacka-olive" />}

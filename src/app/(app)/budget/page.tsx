@@ -136,19 +136,25 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
   // Fetch actual expenses for this period
   const { data: expenses } = useExpensesByPeriod(budget.period, salaryDay)
 
-  // Calculate actual spending from expenses
+  // Calculate actual spending from expenses (excluding savings category)
   // When partner is connected: show total spend (all expenses at full amount)
   // When no partner: show user's portion (personal: 100%, shared: 50%, partner: 0%)
   const actualSpent = useMemo(() => {
     if (!expenses) return 0
 
     if (hasPartner) {
-      // Total household spend - count all expenses at full amount
-      return expenses.reduce((sum, expense) => sum + expense.amount, 0)
+      // Total household spend - count all expenses at full amount (excluding savings)
+      return expenses.reduce((sum, expense) => {
+        // Exclude savings category expenses
+        if (expense.category?.cost_type === 'Savings') return sum
+        return sum + expense.amount
+      }, 0)
     }
 
-    // User's portion only (no partner)
+    // User's portion only (no partner), excluding savings
     return expenses.reduce((sum, expense) => {
+      // Exclude savings category expenses
+      if (expense.category?.cost_type === 'Savings') return sum
       const assignment = expense.cost_assignment || 'personal'
 
       if (assignment === 'personal') {
@@ -161,12 +167,16 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
     }, 0)
   }, [expenses, hasPartner])
 
-  const spentRatio = budget.total_income > 0
-    ? (actualSpent / budget.total_income) * 100
+  // Calculate budgeted expenses (fixed + variable, excluding savings)
+  const budgetedExpenses = (budget.total_expenses || 0) - (budget.total_savings || 0)
+
+  const spentRatio = budgetedExpenses > 0
+    ? (actualSpent / budgetedExpenses) * 100
     : 0
 
-  // Calculate remaining (income - actual spent - savings budgeted)
-  const remaining = budget.total_income - actualSpent - (budget.total_savings || 0)
+  // Calculate remaining (budget-based: budgeted expenses - actual spent)
+  // This is consistent with Dashboard calculation
+  const remaining = budgetedExpenses - actualSpent
 
   return (
     <motion.div
@@ -199,7 +209,7 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
                   {hasPartner && <Users className="w-3 h-3 text-stacka-blue" />}
                 </span>
                 <span className="font-medium">
-                  {formatCurrency(actualSpent)} / {formatCurrency(budget.total_income)}
+                  {formatCurrency(actualSpent)} / {formatCurrency(budgetedExpenses)}
                 </span>
               </div>
               <Progress value={Math.min(spentRatio, 100)} className="h-2" />

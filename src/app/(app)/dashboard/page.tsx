@@ -87,23 +87,33 @@ export default function DashboardPage() {
     ? monthlyTotal
     : (householdIncome?.total_income ?? 0)
 
-  // Calculate TOTAL spent (household view - sum of all expenses)
+  // Calculate TOTAL spent (household view - sum of expenses, excluding savings)
   // When partners are connected, dashboard shows total household expenses
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+  // Exclude savings category expenses - they're set aside, not "spent"
+  const totalSpent = expenses.reduce((sum, exp) => {
+    // Exclude savings category expenses from totalSpent
+    if (exp.category?.cost_type === 'Savings') return sum
+    return sum + exp.amount
+  }, 0)
 
   // Calculate user's portion of expenses (for per-person breakdown)
   // - personal: full amount
   // - shared: 50% of the amount (split with partner)
   // - partner: 0 (doesn't count toward user's budget, partner pays)
+  // Excludes savings category expenses
   const userSpent = expenses.reduce((sum, exp) => {
+    // Exclude savings category expenses
+    if (exp.category?.cost_type === 'Savings') return sum
     const assignment = exp.cost_assignment || 'personal'
     if (assignment === 'partner') return sum // Partner pays, not user
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
     return sum + exp.amount // personal - full amount
   }, 0)
 
-  // Calculate partner's portion of expenses
+  // Calculate partner's portion of expenses (excludes savings)
   const partnerSpent = expenses.reduce((sum, exp) => {
+    // Exclude savings category expenses
+    if (exp.category?.cost_type === 'Savings') return sum
     const assignment = exp.cost_assignment || 'personal'
     if (assignment === 'personal') return sum // User pays, not partner
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split

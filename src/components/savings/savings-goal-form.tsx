@@ -290,7 +290,7 @@ export function SavingsGoalForm({ onSuccess }: SavingsGoalFormProps) {
           </div>
 
           {goalTypeOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-80 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-80 overflow-y-auto">
               {/* Default categories */}
               <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted/50">
                 Standardtyper
