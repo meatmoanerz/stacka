@@ -252,7 +252,7 @@ export function RecurringExpenseForm({ onSuccess }: RecurringExpenseFormProps) {
           </div>
 
           {categoryOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
               {!hasFilteredResults ? (
                 <div className="p-4 text-center text-muted-foreground text-sm">
                   Ingen kategori hittades
@@ -347,7 +347,7 @@ export function RecurringExpenseForm({ onSuccess }: RecurringExpenseFormProps) {
           </div>
 
           {dayPickerOpen && (
-            <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
+            <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto">
               <div className="grid grid-cols-4 gap-1 p-2">
                 {dayOptions.map((day) => (
                   <button

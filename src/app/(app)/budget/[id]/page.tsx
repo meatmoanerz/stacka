@@ -118,16 +118,20 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     }, {} as Record<string, number>)
   }, [expenses, viewMode])
 
-  // Calculate totals
+  // Calculate totals based on view mode
+  // When viewing individual user, split the budget amount 50/50
   const totals = useMemo(() => {
-    const fixedBudgeted = groupedItems.fixed.reduce((sum, item) => sum + item.amount, 0)
-    const variableBudgeted = groupedItems.variable.reduce((sum, item) => sum + item.amount, 0)
-    const savingsBudgeted = groupedItems.savings.reduce((sum, item) => sum + item.amount, 0)
-    
+    // Helper to get budget amount based on view mode
+    const budgetMultiplier = viewMode === 'total' ? 1 : 0.5
+
+    const fixedBudgeted = groupedItems.fixed.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+    const variableBudgeted = groupedItems.variable.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+    const savingsBudgeted = groupedItems.savings.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+
     const fixedActual = groupedItems.fixed.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
     const variableActual = groupedItems.variable.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
     const savingsActual = groupedItems.savings.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
-    
+
     return {
       fixedBudgeted,
       variableBudgeted,
@@ -138,7 +142,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       totalBudgeted: fixedBudgeted + variableBudgeted + savingsBudgeted,
       totalActual: fixedActual + variableActual,
     }
-  }, [groupedItems, actualSpending])
+  }, [groupedItems, actualSpending, viewMode])
 
   // Get expenses filtered by category and view mode
   const getExpensesForCategory = (categoryId: string) => {
@@ -199,7 +203,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const isCurrent = budget.period === currentPeriod.period
-  const remaining = budget.total_income - totals.totalActual - totals.savingsBudgeted
+  // Income also follows view mode - split 50/50 for individual views
+  const displayIncome = viewMode === 'total' ? budget.total_income : budget.total_income / 2
+  const remaining = displayIncome - totals.totalActual - totals.savingsBudgeted
+  // Calculate savings rate based on view mode
+  const displaySavingsRate = displayIncome > 0 ? (totals.savingsBudgeted / displayIncome) * 100 : 0
 
   return (
     <div className="p-4 space-y-4 pb-24">
@@ -264,7 +272,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
                 viewMode === 'total'
-                  ? "bg-white text-stacka-olive shadow-sm"
+                  ? "bg-white dark:bg-card text-stacka-olive shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -276,7 +284,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
                 viewMode === 'mine'
-                  ? "bg-white text-stacka-olive shadow-sm"
+                  ? "bg-white dark:bg-card text-stacka-olive shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -288,7 +296,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all",
                 viewMode === 'partner'
-                  ? "bg-white text-stacka-olive shadow-sm"
+                  ? "bg-white dark:bg-card text-stacka-olive shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -346,7 +354,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         <Card className="border-0 shadow-sm">
           <CardContent className="p-3 text-center">
             <p className="text-xs text-muted-foreground">Inkomst</p>
-            <p className="font-semibold text-sm">{formatCurrency(budget.total_income)}</p>
+            <p className="font-semibold text-sm">{formatCurrency(displayIncome)}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
@@ -358,7 +366,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         <Card className="border-0 shadow-sm bg-success/10">
           <CardContent className="p-3 text-center">
             <p className="text-xs text-muted-foreground">Sparkvot</p>
-            <p className="font-semibold text-sm text-success">{formatPercentage(budget.savings_ratio || 0)}</p>
+            <p className="font-semibold text-sm text-success">{formatPercentage(displaySavingsRate)}</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -374,6 +382,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           actualTotal={totals.fixedActual}
           delay={0.15}
           onCategoryClick={handleCategoryClick}
+          viewMode={viewMode}
         />
       )}
 
@@ -388,6 +397,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           actualTotal={totals.variableActual}
           delay={0.2}
           onCategoryClick={handleCategoryClick}
+          viewMode={viewMode}
         />
       )}
 
@@ -403,6 +413,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           delay={0.25}
           accentColor="success"
           onCategoryClick={handleCategoryClick}
+          viewMode={viewMode}
         />
       )}
 
@@ -498,6 +509,7 @@ interface BudgetSectionProps {
   delay: number
   accentColor?: 'default' | 'success'
   onCategoryClick?: (item: BudgetItem) => void
+  viewMode?: BudgetViewMode
 }
 
 function BudgetSection({
@@ -510,9 +522,16 @@ function BudgetSection({
   delay,
   accentColor = 'default',
   onCategoryClick,
+  viewMode = 'total',
 }: BudgetSectionProps) {
   const percentage = budgetedTotal > 0 ? (actualTotal / budgetedTotal) * 100 : 0
   const isOverBudget = percentage > 100
+
+  // Helper function to get budget amount based on view mode
+  const getItemBudget = (amount: number) => {
+    if (viewMode === 'total') return amount
+    return amount / 2 // 50/50 split for individual views
+  }
 
   return (
     <motion.div
@@ -551,7 +570,7 @@ function BudgetSection({
         <CardContent className="space-y-3">
           {items.map(item => {
             const actual = actualSpending[item.category_id || ''] || 0
-            const budgeted = item.amount
+            const budgeted = getItemBudget(item.amount)
             const itemPercentage = budgeted > 0 ? (actual / budgeted) * 100 : 0
             const itemOverBudget = itemPercentage > 100
 

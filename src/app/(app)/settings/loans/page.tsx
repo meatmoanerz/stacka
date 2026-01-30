@@ -35,23 +35,21 @@ import { toast } from 'sonner'
 
 export default function LoansSettingsPage() {
   const router = useRouter()
+  const { data: user } = useUser()
+
+  // Calculate current budget period based on user's salary day
+  const salaryDay = user?.salary_day || 25
+  const currentPeriod = getCurrentBudgetPeriod(salaryDay)
+
+  // Initialize expense date to first day of current budget period
   const [addOpen, setAddOpen] = useState(false)
   const [createExpensesOpen, setCreateExpensesOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
-  // Default expense date to 1st of current month
-  const [expenseDate, setExpenseDate] = useState(() => {
-    const now = new Date()
-    return format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd')
-  })
-
-  const { data: user } = useUser()
+  const [expenseDate, setExpenseDate] = useState(() => format(currentPeriod.startDate, 'yyyy-MM-dd'))
 
   const { data: loans, isLoading, ownLoans } = useAllLoans()
   const { data: loanGroups } = useLoanGroups()
   const createExpensesFromLoans = useCreateExpensesFromLoans()
-
-  const salaryDay = user?.salary_day || 25
-  const currentPeriod = getCurrentBudgetPeriod(salaryDay)
 
   const handleCreateExpenses = async () => {
     if (!ownLoans || ownLoans.length === 0) return

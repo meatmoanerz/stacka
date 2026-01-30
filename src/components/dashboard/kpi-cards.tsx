@@ -14,6 +14,7 @@ interface KPICardsProps {
   salaryDay: number
   hasBudget: boolean
   totalIncome: number
+  actualSavings: number  // Actual savings from savings category expenses
 }
 
 export function KPICards({
@@ -22,7 +23,8 @@ export function KPICards({
   savingsRate,
   salaryDay,
   hasBudget,
-  totalIncome
+  totalIncome,
+  actualSavings
 }: KPICardsProps) {
   const remaining = totalBudget - totalSpent
   const daysUntilSalary = getDaysUntilSalary(salaryDay)
@@ -30,9 +32,9 @@ export function KPICards({
   const dailyBudget = daysUntilSalary > 0 ? remaining / daysUntilSalary : 0
   const spentPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
 
-  // Calculate actual savings rate based on spending
-  // Actual = (income - spent) / income * 100
-  const actualSavingsRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0
+  // Calculate actual savings rate based on actual savings registered in savings categories
+  // Actual = actualSavings / totalIncome * 100
+  const actualSavingsRate = totalIncome > 0 ? (actualSavings / totalIncome) * 100 : 0
 
   // Check if overspent or on track
   const isOverBudget = spentPercentage > periodProgress

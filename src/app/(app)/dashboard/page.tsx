@@ -10,7 +10,6 @@ import { useCategories } from '@/hooks/use-categories'
 import { getCurrentBudgetPeriod, formatPeriodDisplay } from '@/lib/utils/budget-period'
 import { KPICards } from '@/components/dashboard/kpi-cards'
 import { BudgetOverview } from '@/components/dashboard/budget-overview'
-import { ExpenseChart } from '@/components/dashboard/expense-chart'
 import { RecentExpenses } from '@/components/dashboard/recent-expenses'
 import { RecurringExpensesWidget } from '@/components/dashboard/recurring-expenses-widget'
 import { PersonBudgetBreakdown } from '@/components/dashboard/person-budget-breakdown'
@@ -110,7 +109,15 @@ export default function DashboardPage() {
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
     return sum + exp.amount // partner - full amount
   }, 0)
-  
+
+  // Calculate actual savings from expenses in savings categories
+  const actualSavings = expenses.reduce((sum, exp) => {
+    if (exp.category?.cost_type === 'Savings') {
+      return sum + exp.amount
+    }
+    return sum
+  }, 0)
+
   // Calculate budget amounts by type
   const budgetItems = {
     fixed: budget?.budget_items
@@ -161,6 +168,7 @@ export default function DashboardPage() {
         salaryDay={salaryDay}
         hasBudget={hasBudget}
         totalIncome={totalIncome}
+        actualSavings={actualSavings}
       />
 
       {/* Per-person breakdown - only show when partner is connected */}
@@ -181,26 +189,17 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Charts Row */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <BudgetOverview 
-            expenses={expenses} 
-            budgetItems={budgetItems}
-          />
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <ExpenseChart expenses={expenses} />
-        </motion.div>
-      </div>
+      {/* Budget Overview */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <BudgetOverview
+          expenses={expenses}
+          budgetItems={budgetItems}
+        />
+      </motion.div>
 
       {/* Recurring Expenses Widget */}
       <RecurringExpensesWidget />
