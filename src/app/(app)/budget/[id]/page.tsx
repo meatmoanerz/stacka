@@ -205,7 +205,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const isCurrent = budget.period === currentPeriod.period
   // Income also follows view mode - split 50/50 for individual views
   const displayIncome = viewMode === 'total' ? budget.total_income : budget.total_income / 2
-  const remaining = displayIncome - totals.totalActual - totals.savingsBudgeted
+  // Calculate remaining: Budgeted expenses (fixed + variable) - Actual spent
+  // This gives the actual amount left to spend within the budget
+  const remaining = (totals.fixedBudgeted + totals.variableBudgeted) - totals.totalActual
   // Calculate savings rate based on view mode
   const displaySavingsRate = displayIncome > 0 ? (totals.savingsBudgeted / displayIncome) * 100 : 0
 

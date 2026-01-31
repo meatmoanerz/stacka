@@ -168,7 +168,8 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
   }, [expenses, hasPartner])
 
   // Calculate budgeted expenses (fixed + variable, excluding savings)
-  const budgetedExpenses = (budget.total_expenses || 0) - (budget.total_savings || 0)
+  // Note: total_expenses already contains only fixed + variable expenses (savings are stored separately in total_savings)
+  const budgetedExpenses = budget.total_expenses || 0
 
   const spentRatio = budgetedExpenses > 0
     ? (actualSpent / budgetedExpenses) * 100
