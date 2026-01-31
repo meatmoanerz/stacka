@@ -205,7 +205,9 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const isCurrent = budget.period === currentPeriod.period
   // Income also follows view mode - split 50/50 for individual views
   const displayIncome = viewMode === 'total' ? budget.total_income : budget.total_income / 2
-  const remaining = displayIncome - totals.totalActual - totals.savingsBudgeted
+  // Calculate remaining: Total budgeted (fixed + variable + savings) - Actual spent
+  // All money going out should be counted - both expenses and savings
+  const remaining = totals.totalBudgeted - totals.totalActual
   // Calculate savings rate based on view mode
   const displaySavingsRate = displayIncome > 0 ? (totals.savingsBudgeted / displayIncome) * 100 : 0
 
@@ -333,11 +335,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-white/80">
                 <span>Spenderat</span>
-                <span>{formatCurrency(totals.totalActual)} / {formatCurrency(totals.fixedBudgeted + totals.variableBudgeted)}</span>
+                <span>{formatCurrency(totals.totalActual)} / {formatCurrency(totals.totalBudgeted)}</span>
               </div>
-              <Progress 
-                value={Math.min(100, (totals.totalActual / (totals.fixedBudgeted + totals.variableBudgeted)) * 100)} 
-                className="h-2 bg-white/20" 
+              <Progress
+                value={Math.min(100, (totals.totalActual / totals.totalBudgeted) * 100)}
+                className="h-2 bg-white/20"
               />
             </div>
           </CardContent>
