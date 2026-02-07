@@ -97,7 +97,11 @@
     "noBudgets": "Inga budgetar ännu",
     "createFirst": "Skapa din första budget",
     "cashflow": "Kassaflöde",
-    "ccmExpenses": "Kreditkortsutgifter"
+    "ccmExpenses": "Kreditkortsutgifter",
+    "unbudgeted": "Övrigt (ej budgeterat)",
+    "expensesWithoutBudget": "{count} utgift utan budget",
+    "expensesWithoutBudgetPlural": "{count} utgifter utan budget",
+    "notBudgeted": "ej budgeterat"
   },
   "categories": {
     "title": "Kategorier",
@@ -249,7 +253,36 @@
     "invoiceBreakDate": "Fakturabrytdatum",
     "currentInvoice": "Nuvarande faktura",
     "nextInvoice": "Nästa faktura",
-    "totalCCMExpenses": "Totala kreditkortsutgifter"
+    "totalCCMExpenses": "Totala kreditkortsutgifter",
+    "groupPurchase": {
+      "title": "Lägg till gruppköp",
+      "subtitle": "Registrera hel nota där andra swishat dig",
+      "totalAmount": "Totalt belopp",
+      "description": "Beskrivning",
+      "category": "Kategori",
+      "date": "Datum",
+      "yourShare": "Din andel",
+      "partnerShare": "{name}s andel",
+      "swishAmount": "Swish tillbaka",
+      "shareEqual": "Dela lika",
+      "shareManual": "Manuellt",
+      "shareYouOnly": "Bara jag",
+      "recipientYou": "Jag fick Swish",
+      "recipientPartner": "{name} fick Swish",
+      "recipientShared": "Delat (50/50)",
+      "swishRecipientQuestion": "Vem fick Swish-betalningarna?",
+      "reviewTitle": "Kontrollera uppgifterna",
+      "totalOnCard": "Totalt på kreditkort",
+      "distribution": "Fördelning",
+      "budgetImpact": "Budgetpåverkan",
+      "budgetImpactNote": "Bara er andel påverkar budgeten",
+      "receivedBy": "Mottagen av",
+      "sharesExceedTotal": "Andelarna överskrider totalbeloppet",
+      "create": "Skapa gruppköp",
+      "saved": "Gruppköp sparat!",
+      "couldNotSave": "Kunde inte spara gruppköp",
+      "step": "Steg {current} av {total}"
+    }
   },
   "monthlyIncome": {
     "title": "Månadens inkomst",

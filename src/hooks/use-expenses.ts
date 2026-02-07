@@ -209,6 +209,12 @@ export function useCreateExpense() {
         is_recurring: newExpense.is_recurring || false,
         recurring_expense_id: newExpense.recurring_expense_id || null,
         is_ccm: newExpense.is_ccm || false,
+        is_group_purchase: newExpense.is_group_purchase || false,
+        group_purchase_total: newExpense.group_purchase_total || null,
+        group_purchase_user_share: newExpense.group_purchase_user_share || null,
+        group_purchase_partner_share: newExpense.group_purchase_partner_share || null,
+        group_purchase_swish_amount: newExpense.group_purchase_swish_amount || null,
+        group_purchase_swish_recipient: newExpense.group_purchase_swish_recipient || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         category: category || {

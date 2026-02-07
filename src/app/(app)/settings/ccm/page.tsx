@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingPage } from '@/components/shared/loading-spinner'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CreditCard, Settings, AlertTriangle, Users, UserCheck, Trash2, ChevronDown, ChevronUp, Calendar, Check, Receipt } from 'lucide-react'
+import { ArrowLeft, CreditCard, Settings, AlertTriangle, Users, UserCheck, Trash2, ChevronDown, ChevronUp, Calendar, Check, Receipt, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency, formatRelativeDate } from '@/lib/utils/formatters'
 import { format } from 'date-fns'
@@ -18,6 +18,7 @@ import { sv } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 import type { ExpenseWithCategory } from '@/types'
+import { GroupPurchaseWizard } from '@/components/ccm/group-purchase-wizard'
 
 const categoryIcons: Record<string, string> = {
   Mat: '🍔',
@@ -64,30 +65,69 @@ function calculatePaymentSplit(
 ): PaymentSplit {
   let userPersonal = 0
   let userShared = 0
+  let userSwishResponsibility = 0
   let partnerPersonal = 0
   let partnerShared = 0
+  let partnerSwishResponsibility = 0
 
   expenses.forEach((expense) => {
     const amount = expense.amount
 
+    // Handle group purchases separately
+    if (expense.is_group_purchase) {
+      const swishAmount = expense.group_purchase_swish_amount || 0
+      const swishRecipient = expense.group_purchase_swish_recipient
+
+      // Add actual shares to personal/shared (amount = user_share + partner_share)
+      if (expense.cost_assignment === 'personal') {
+        if (expense.user_id === userId) {
+          userPersonal += amount
+        } else {
+          partnerPersonal += amount
+        }
+      } else if (expense.cost_assignment === 'shared') {
+        userShared += amount / 2
+        partnerShared += amount / 2
+      } else if (expense.cost_assignment === 'partner') {
+        partnerPersonal += amount
+      }
+
+      // Add Swish responsibility based on recipient
+      if (swishRecipient === 'user') {
+        userSwishResponsibility += swishAmount
+      } else if (swishRecipient === 'partner') {
+        partnerSwishResponsibility += swishAmount
+      } else if (swishRecipient === 'shared') {
+        userSwishResponsibility += swishAmount / 2
+        partnerSwishResponsibility += swishAmount / 2
+      }
+
+      return // Skip normal processing
+    }
+
+    // Normal expense processing
     if (expense.cost_assignment === 'personal') {
-      // Personal expense - whoever registered it pays
       if (expense.user_id === userId) {
         userPersonal += amount
       } else {
         partnerPersonal += amount
       }
     } else if (expense.cost_assignment === 'shared') {
-      // Shared expense - 50/50
       userShared += amount / 2
       partnerShared += amount / 2
     } else if (expense.cost_assignment === 'partner') {
-      // Partner pays 100%
       partnerPersonal += amount
     }
   })
 
-  const registeredTotal = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+  // For group purchases, use group_purchase_total for invoice matching
+  const registeredTotal = expenses.reduce((sum, exp) => {
+    if (exp.is_group_purchase) {
+      return sum + (exp.group_purchase_total || exp.amount)
+    }
+    return sum + exp.amount
+  }, 0)
+
   const unregisteredDifference = actualInvoiceAmount - registeredTotal
 
   // Split unregistered difference 50/50
@@ -95,8 +135,8 @@ function calculatePaymentSplit(
   const partnerUnregistered = unregisteredDifference > 0 ? unregisteredDifference / 2 : 0
 
   return {
-    userAmount: userPersonal + userShared + userUnregistered,
-    partnerAmount: partnerPersonal + partnerShared + partnerUnregistered,
+    userAmount: userPersonal + userShared + userSwishResponsibility + userUnregistered,
+    partnerAmount: partnerPersonal + partnerShared + partnerSwishResponsibility + partnerUnregistered,
     unregisteredDifference: Math.max(0, unregisteredDifference),
     registeredTotal,
     actualInvoice: actualInvoiceAmount,
@@ -119,7 +159,10 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
   const [editingAmount, setEditingAmount] = useState(false)
   const [invoiceInput, setInvoiceInput] = useState(invoice?.actual_amount?.toString() || '')
 
-  const periodTotal = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const periodTotal = expenses.reduce((sum, exp) => {
+    if (exp.is_group_purchase) return sum + (exp.group_purchase_total || exp.amount)
+    return sum + exp.amount
+  }, 0)
   const status = getInvoiceStatus(period)
   const actualAmount = invoice?.actual_amount || 0
 
@@ -292,7 +335,12 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {expense.cost_assignment === 'shared' && (
+                      {expense.is_group_purchase && (
+                        <div className="w-5 h-5 rounded-full bg-stacka-mint/30 flex items-center justify-center" title="Gruppköp">
+                          <Users className="w-3 h-3 text-stacka-olive" />
+                        </div>
+                      )}
+                      {expense.cost_assignment === 'shared' && !expense.is_group_purchase && (
                         <div className="w-5 h-5 rounded-full bg-stacka-blue/20 flex items-center justify-center" title="Delad utgift">
                           <Users className="w-3 h-3 text-stacka-blue" />
                         </div>
@@ -303,7 +351,7 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                         </div>
                       )}
                       <span className="font-semibold text-stacka-coral">
-                        -{formatCurrency(expense.amount)}
+                        -{formatCurrency(expense.is_group_purchase ? (expense.group_purchase_total || expense.amount) : expense.amount)}
                       </span>
                       <Button
                         variant="ghost"
@@ -337,6 +385,7 @@ export default function CCMDashboardPage() {
   const { data: invoices = [] } = useCCMInvoices()
   const deleteExpense = useDeleteExpense()
   const upsertInvoice = useUpsertCCMInvoice()
+  const [groupPurchaseOpen, setGroupPurchaseOpen] = useState(false)
 
   const groupedExpenses = useMemo(() => {
     return groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
@@ -406,7 +455,10 @@ export default function CCMDashboardPage() {
     )
   }
 
-  const totalCCM = ccmExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const totalCCM = ccmExpenses.reduce((sum, exp) => {
+    if (exp.is_group_purchase) return sum + (exp.group_purchase_total || exp.amount)
+    return sum + exp.amount
+  }, 0)
 
   return (
     <div className="p-4 space-y-4">
@@ -425,11 +477,22 @@ export default function CCMDashboardPage() {
             <p className="text-sm text-muted-foreground">CCM-översikt</p>
           </div>
         </div>
-        <Link href="/settings/ccm/settings">
-          <Button variant="ghost" size="icon">
-            <Settings className="w-5 h-5" />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setGroupPurchaseOpen(true)}
+            className="text-stacka-olive border-stacka-olive/30 hover:bg-stacka-olive/10"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Gruppköp
           </Button>
-        </Link>
+          <Link href="/settings/ccm/settings">
+            <Button variant="ghost" size="icon">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </Link>
+        </div>
       </motion.div>
 
       {/* Summary Card */}
@@ -510,6 +573,11 @@ export default function CCMDashboardPage() {
           ))}
         </div>
       )}
+
+      <GroupPurchaseWizard
+        open={groupPurchaseOpen}
+        onOpenChange={setGroupPurchaseOpen}
+      />
     </div>
   )
 }

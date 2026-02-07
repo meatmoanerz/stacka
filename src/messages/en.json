@@ -97,7 +97,11 @@
     "noBudgets": "No budgets yet",
     "createFirst": "Create your first budget",
     "cashflow": "Cash flow",
-    "ccmExpenses": "Credit card expenses"
+    "ccmExpenses": "Credit card expenses",
+    "unbudgeted": "Other (not budgeted)",
+    "expensesWithoutBudget": "{count} expense without budget",
+    "expensesWithoutBudgetPlural": "{count} expenses without budget",
+    "notBudgeted": "not budgeted"
   },
   "categories": {
     "title": "Categories",
@@ -213,7 +217,36 @@
     "invoiceBreakDate": "Invoice break date",
     "currentInvoice": "Current invoice",
     "nextInvoice": "Next invoice",
-    "totalCCMExpenses": "Total credit card expenses"
+    "totalCCMExpenses": "Total credit card expenses",
+    "groupPurchase": {
+      "title": "Add group purchase",
+      "subtitle": "Register a bill where others reimbursed you via Swish",
+      "totalAmount": "Total amount",
+      "description": "Description",
+      "category": "Category",
+      "date": "Date",
+      "yourShare": "Your share",
+      "partnerShare": "{name}'s share",
+      "swishAmount": "Swish back",
+      "shareEqual": "Split equally",
+      "shareManual": "Manual",
+      "shareYouOnly": "Only me",
+      "recipientYou": "I received Swish",
+      "recipientPartner": "{name} received Swish",
+      "recipientShared": "Split (50/50)",
+      "swishRecipientQuestion": "Who received the Swish payments?",
+      "reviewTitle": "Review details",
+      "totalOnCard": "Total on credit card",
+      "distribution": "Distribution",
+      "budgetImpact": "Budget impact",
+      "budgetImpactNote": "Only your share affects the budget",
+      "receivedBy": "Received by",
+      "sharesExceedTotal": "Shares exceed total amount",
+      "create": "Create group purchase",
+      "saved": "Group purchase saved!",
+      "couldNotSave": "Could not save group purchase",
+      "step": "Step {current} of {total}"
+    }
   },
   "monthlyIncome": {
     "title": "Monthly Income",

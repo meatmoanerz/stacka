@@ -22,13 +22,14 @@ import {
   TrendingDown,
   Wallet,
   AlertTriangle,
+  AlertCircle,
   Users,
   User,
   UserCheck,
   ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { BudgetItem, ExpenseWithCategory } from '@/types'
+import type { BudgetItem, Category, ExpenseWithCategory } from '@/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,6 +119,31 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     }, {} as Record<string, number>)
   }, [expenses, viewMode])
 
+  // Find expenses with categories not in the budget
+  const unbudgetedByCategory = useMemo(() => {
+    if (!expenses || !budget?.budget_items) return {} as Record<string, { category: Category; expenses: ExpenseWithCategory[] }>
+
+    const budgetedCategoryIds = new Set(
+      budget.budget_items.map(item => item.category_id).filter(Boolean)
+    )
+
+    const unbudgeted = expenses.filter(expense =>
+      !budgetedCategoryIds.has(expense.category_id)
+    )
+
+    return unbudgeted.reduce((acc, expense) => {
+      const categoryId = expense.category_id
+      if (!acc[categoryId]) {
+        acc[categoryId] = {
+          category: expense.category,
+          expenses: [],
+        }
+      }
+      acc[categoryId].expenses.push(expense)
+      return acc
+    }, {} as Record<string, { category: Category; expenses: ExpenseWithCategory[] }>)
+  }, [expenses, budget])
+
   // Calculate totals based on view mode
   // When viewing individual user, split the budget amount 50/50
   const totals = useMemo(() => {
@@ -132,6 +158,26 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     const variableActual = groupedItems.variable.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
     const savingsActual = groupedItems.savings.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
 
+    // Calculate unbudgeted total
+    const unbudgetedTotal = Object.values(unbudgetedByCategory).reduce(
+      (sum, { expenses: catExpenses }) => {
+        return sum + catExpenses.reduce((expSum, exp) => {
+          const assignment = exp.cost_assignment || 'personal'
+          if (viewMode === 'total') return expSum + exp.amount
+          if (viewMode === 'mine') {
+            if (assignment === 'personal') return expSum + exp.amount
+            if (assignment === 'shared') return expSum + (exp.amount / 2)
+          }
+          if (viewMode === 'partner') {
+            if (assignment === 'partner') return expSum + exp.amount
+            if (assignment === 'shared') return expSum + (exp.amount / 2)
+          }
+          return expSum
+        }, 0)
+      },
+      0
+    )
+
     return {
       fixedBudgeted,
       variableBudgeted,
@@ -139,10 +185,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       fixedActual,
       variableActual,
       savingsActual,
+      unbudgetedTotal,
       totalBudgeted: fixedBudgeted + variableBudgeted + savingsBudgeted,
-      totalActual: fixedActual + variableActual,
+      totalActual: fixedActual + variableActual + unbudgetedTotal,
     }
-  }, [groupedItems, actualSpending, viewMode])
+  }, [groupedItems, actualSpending, viewMode, unbudgetedByCategory])
 
   // Get expenses filtered by category and view mode
   const getExpensesForCategory = (categoryId: string) => {
@@ -419,6 +466,80 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
         />
       )}
 
+      {/* Unbudgeted Expenses */}
+      {Object.keys(unbudgetedByCategory).length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-0 shadow-sm border-l-4 border-l-amber-400">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-sm font-medium">Övrigt (ej budgeterat)</CardTitle>
+                </div>
+                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                  {formatCurrency(totals.unbudgetedTotal)}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {Object.entries(unbudgetedByCategory).map(([categoryId, { category, expenses: catExpenses }]) => {
+                const total = catExpenses.reduce((sum, exp) => {
+                  const assignment = exp.cost_assignment || 'personal'
+                  if (viewMode === 'total') return sum + exp.amount
+                  if (viewMode === 'mine') {
+                    if (assignment === 'personal') return sum + exp.amount
+                    if (assignment === 'shared') return sum + (exp.amount / 2)
+                  }
+                  if (viewMode === 'partner') {
+                    if (assignment === 'partner') return sum + exp.amount
+                    if (assignment === 'shared') return sum + (exp.amount / 2)
+                  }
+                  return sum
+                }, 0)
+
+                if (total === 0) return null
+
+                return (
+                  <div
+                    key={categoryId}
+                    className="space-y-1 p-2 -mx-2 rounded-lg cursor-pointer hover:bg-muted/50 active:bg-muted transition-colors"
+                    onClick={() => handleCategoryClick({
+                      id: categoryId,
+                      budget_id: budget.id,
+                      category_id: categoryId,
+                      name: category?.name || 'Okänd',
+                      type: category?.cost_type === 'Fixed' ? 'fixedExpense' : 'variableExpense',
+                      amount: 0,
+                      is_ccm: false,
+                      created_at: '',
+                    } as BudgetItem)}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{category?.name || 'Okänd kategori'}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-amber-600 dark:text-amber-400">
+                          {formatCurrency(total)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {catExpenses.length} utgift{catExpenses.length !== 1 ? 'er' : ''} utan budget
+                    </p>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Category Drill-down Dialog */}
       <Dialog open={!!selectedCategory} onOpenChange={(open) => !open && setSelectedCategory(null)}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
@@ -426,7 +547,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
             <DialogTitle className="flex items-center justify-between">
               <span>{selectedCategory?.name}</span>
               <span className="text-sm font-normal text-muted-foreground">
-                {selectedCategory && formatCurrency(actualSpending[selectedCategory.category_id || ''] || 0)} / {selectedCategory && formatCurrency(selectedCategory.amount)}
+                {selectedCategory && formatCurrency(actualSpending[selectedCategory.category_id || ''] || 0)}
+                {selectedCategory && selectedCategory.amount > 0
+                  ? ` / ${formatCurrency(selectedCategory.amount)}`
+                  : ' (ej budgeterat)'}
               </span>
             </DialogTitle>
           </DialogHeader>

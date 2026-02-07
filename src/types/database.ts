@@ -334,6 +334,12 @@ export type Database = {
           is_recurring: boolean
           recurring_expense_id: string | null
           is_ccm: boolean
+          is_group_purchase: boolean
+          group_purchase_total: number | null
+          group_purchase_user_share: number | null
+          group_purchase_partner_share: number | null
+          group_purchase_swish_amount: number | null
+          group_purchase_swish_recipient: 'user' | 'partner' | 'shared' | null
           created_at: string
           updated_at: string
         }
@@ -349,6 +355,12 @@ export type Database = {
           is_recurring?: boolean
           recurring_expense_id?: string | null
           is_ccm?: boolean
+          is_group_purchase?: boolean
+          group_purchase_total?: number | null
+          group_purchase_user_share?: number | null
+          group_purchase_partner_share?: number | null
+          group_purchase_swish_amount?: number | null
+          group_purchase_swish_recipient?: 'user' | 'partner' | 'shared' | null
           created_at?: string
           updated_at?: string
         }
@@ -364,6 +376,12 @@ export type Database = {
           is_recurring?: boolean
           recurring_expense_id?: string | null
           is_ccm?: boolean
+          is_group_purchase?: boolean
+          group_purchase_total?: number | null
+          group_purchase_user_share?: number | null
+          group_purchase_partner_share?: number | null
+          group_purchase_swish_amount?: number | null
+          group_purchase_swish_recipient?: 'user' | 'partner' | 'shared' | null
           created_at?: string
           updated_at?: string
         }
