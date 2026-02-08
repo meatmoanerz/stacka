@@ -22,7 +22,6 @@ import {
   TrendingDown,
   Wallet,
   AlertTriangle,
-  AlertCircle,
   Users,
   User,
   UserCheck,
@@ -144,39 +143,41 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     }, {} as Record<string, { category: Category; expenses: ExpenseWithCategory[] }>)
   }, [expenses, budget])
 
+  // Enhanced grouped items: include unbudgeted categories as zero-budget items in the main list
+  const enhancedGroupedItems = useMemo(() => {
+    const syntheticItems: BudgetItem[] = Object.entries(unbudgetedByCategory).map(
+      ([categoryId, { category }]) => ({
+        id: `unbudgeted-${categoryId}`,
+        budget_id: budget?.id || '',
+        category_id: categoryId,
+        name: category?.name || 'Okänd kategori',
+        type: category?.cost_type === 'Fixed' ? 'fixedExpense' : 'variableExpense',
+        amount: 0,
+        is_ccm: false,
+        created_at: '',
+      } as BudgetItem)
+    )
+
+    return {
+      fixed: [...groupedItems.fixed, ...syntheticItems.filter(item => item.type === 'fixedExpense')],
+      variable: [...groupedItems.variable, ...syntheticItems.filter(item => item.type === 'variableExpense')],
+      savings: groupedItems.savings,
+    }
+  }, [groupedItems, unbudgetedByCategory, budget])
+
   // Calculate totals based on view mode
   // When viewing individual user, split the budget amount 50/50
   const totals = useMemo(() => {
     // Helper to get budget amount based on view mode
     const budgetMultiplier = viewMode === 'total' ? 1 : 0.5
 
-    const fixedBudgeted = groupedItems.fixed.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
-    const variableBudgeted = groupedItems.variable.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
-    const savingsBudgeted = groupedItems.savings.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+    const fixedBudgeted = enhancedGroupedItems.fixed.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+    const variableBudgeted = enhancedGroupedItems.variable.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+    const savingsBudgeted = enhancedGroupedItems.savings.reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
 
-    const fixedActual = groupedItems.fixed.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
-    const variableActual = groupedItems.variable.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
-    const savingsActual = groupedItems.savings.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
-
-    // Calculate unbudgeted total
-    const unbudgetedTotal = Object.values(unbudgetedByCategory).reduce(
-      (sum, { expenses: catExpenses }) => {
-        return sum + catExpenses.reduce((expSum, exp) => {
-          const assignment = exp.cost_assignment || 'personal'
-          if (viewMode === 'total') return expSum + exp.amount
-          if (viewMode === 'mine') {
-            if (assignment === 'personal') return expSum + exp.amount
-            if (assignment === 'shared') return expSum + (exp.amount / 2)
-          }
-          if (viewMode === 'partner') {
-            if (assignment === 'partner') return expSum + exp.amount
-            if (assignment === 'shared') return expSum + (exp.amount / 2)
-          }
-          return expSum
-        }, 0)
-      },
-      0
-    )
+    const fixedActual = enhancedGroupedItems.fixed.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
+    const variableActual = enhancedGroupedItems.variable.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
+    const savingsActual = enhancedGroupedItems.savings.reduce((sum, item) => sum + (actualSpending[item.category_id || ''] || 0), 0)
 
     return {
       fixedBudgeted,
@@ -185,11 +186,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       fixedActual,
       variableActual,
       savingsActual,
-      unbudgetedTotal,
       totalBudgeted: fixedBudgeted + variableBudgeted + savingsBudgeted,
-      totalActual: fixedActual + variableActual + unbudgetedTotal,
+      totalActual: fixedActual + variableActual,
     }
-  }, [groupedItems, actualSpending, viewMode, unbudgetedByCategory])
+  }, [enhancedGroupedItems, actualSpending, viewMode])
 
   // Get expenses filtered by category and view mode
   const getExpensesForCategory = (categoryId: string) => {
@@ -421,11 +421,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       </motion.div>
 
       {/* Fixed Expenses */}
-      {groupedItems.fixed.length > 0 && (
+      {enhancedGroupedItems.fixed.length > 0 && (
         <BudgetSection
           title="Fasta kostnader"
           icon={<TrendingDown className="w-4 h-4" />}
-          items={groupedItems.fixed}
+          items={enhancedGroupedItems.fixed}
           actualSpending={actualSpending}
           budgetedTotal={totals.fixedBudgeted}
           actualTotal={totals.fixedActual}
@@ -436,11 +436,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Variable Expenses */}
-      {groupedItems.variable.length > 0 && (
+      {enhancedGroupedItems.variable.length > 0 && (
         <BudgetSection
           title="Rörliga kostnader"
           icon={<TrendingDown className="w-4 h-4" />}
-          items={groupedItems.variable}
+          items={enhancedGroupedItems.variable}
           actualSpending={actualSpending}
           budgetedTotal={totals.variableBudgeted}
           actualTotal={totals.variableActual}
@@ -451,11 +451,11 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       )}
 
       {/* Savings */}
-      {groupedItems.savings.length > 0 && (
+      {enhancedGroupedItems.savings.length > 0 && (
         <BudgetSection
           title="Sparande"
           icon={<PiggyBank className="w-4 h-4" />}
-          items={groupedItems.savings}
+          items={enhancedGroupedItems.savings}
           actualSpending={actualSpending}
           budgetedTotal={totals.savingsBudgeted}
           actualTotal={totals.savingsActual}
@@ -464,80 +464,6 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           onCategoryClick={handleCategoryClick}
           viewMode={viewMode}
         />
-      )}
-
-      {/* Unbudgeted Expenses */}
-      {Object.keys(unbudgetedByCategory).length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="border-0 shadow-sm border-l-4 border-l-amber-400">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                  </div>
-                  <CardTitle className="text-sm font-medium">Övrigt (ej budgeterat)</CardTitle>
-                </div>
-                <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                  {formatCurrency(totals.unbudgetedTotal)}
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {Object.entries(unbudgetedByCategory).map(([categoryId, { category, expenses: catExpenses }]) => {
-                const total = catExpenses.reduce((sum, exp) => {
-                  const assignment = exp.cost_assignment || 'personal'
-                  if (viewMode === 'total') return sum + exp.amount
-                  if (viewMode === 'mine') {
-                    if (assignment === 'personal') return sum + exp.amount
-                    if (assignment === 'shared') return sum + (exp.amount / 2)
-                  }
-                  if (viewMode === 'partner') {
-                    if (assignment === 'partner') return sum + exp.amount
-                    if (assignment === 'shared') return sum + (exp.amount / 2)
-                  }
-                  return sum
-                }, 0)
-
-                if (total === 0) return null
-
-                return (
-                  <div
-                    key={categoryId}
-                    className="space-y-1 p-2 -mx-2 rounded-lg cursor-pointer hover:bg-muted/50 active:bg-muted transition-colors"
-                    onClick={() => handleCategoryClick({
-                      id: categoryId,
-                      budget_id: budget.id,
-                      category_id: categoryId,
-                      name: category?.name || 'Okänd',
-                      type: category?.cost_type === 'Fixed' ? 'fixedExpense' : 'variableExpense',
-                      amount: 0,
-                      is_ccm: false,
-                      created_at: '',
-                    } as BudgetItem)}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">{category?.name || 'Okänd kategori'}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-amber-600 dark:text-amber-400">
-                          {formatCurrency(total)}
-                        </span>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {catExpenses.length} utgift{catExpenses.length !== 1 ? 'er' : ''} utan budget
-                    </p>
-                  </div>
-                )
-              })}
-            </CardContent>
-          </Card>
-        </motion.div>
       )}
 
       {/* Category Drill-down Dialog */}
@@ -650,8 +576,7 @@ function BudgetSection({
   onCategoryClick,
   viewMode = 'total',
 }: BudgetSectionProps) {
-  const percentage = budgetedTotal > 0 ? (actualTotal / budgetedTotal) * 100 : 0
-  const isOverBudget = percentage > 100
+  const isOverBudget = actualTotal > budgetedTotal
 
   // Helper function to get budget amount based on view mode
   const getItemBudget = (amount: number) => {
@@ -697,8 +622,8 @@ function BudgetSection({
           {items.map(item => {
             const actual = actualSpending[item.category_id || ''] || 0
             const budgeted = getItemBudget(item.amount)
-            const itemPercentage = budgeted > 0 ? (actual / budgeted) * 100 : 0
-            const itemOverBudget = itemPercentage > 100
+            const itemPercentage = budgeted > 0 ? (actual / budgeted) * 100 : (actual > 0 ? 100 : 0)
+            const itemOverBudget = actual > budgeted
 
             return (
               <div

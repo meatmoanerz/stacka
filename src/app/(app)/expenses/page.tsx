@@ -223,7 +223,7 @@ export default function AddExpensePage() {
                           "font-semibold",
                           expense.is_ccm ? "text-stacka-coral" : ""
                         )}>
-                          -{formatCurrency(expense.cost_assignment === 'shared' ? expense.amount / 2 : expense.amount)}
+                          -{formatCurrency(expense.amount)}
                         </span>
                       </div>
                     </motion.button>
