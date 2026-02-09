@@ -16,7 +16,7 @@ import { sv } from 'date-fns/locale'
 import Link from 'next/link'
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',

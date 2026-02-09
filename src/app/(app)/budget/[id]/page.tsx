@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useBudget, useDeleteBudget } from '@/hooks/use-budgets'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useUser, usePartner } from '@/hooks/use-user'
+import { useHouseholdMonthlyIncomes, useMonthlyIncomeTotal } from '@/hooks/use-monthly-incomes'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -13,7 +14,7 @@ import { LoadingPage } from '@/components/shared/loading-spinner'
 import { formatCurrency, formatPercentage, formatDate } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
 import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   Edit2,
@@ -25,7 +26,9 @@ import {
   Users,
   User,
   UserCheck,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Banknote
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { BudgetItem, Category, ExpenseWithCategory } from '@/types'
@@ -65,7 +68,10 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
   const { data: expenses } = useExpensesByPeriod(budget?.period || '', salaryDay)
+  const { data: householdIncomes } = useHouseholdMonthlyIncomes(budget?.period)
+  const { data: incomeTotal } = useMonthlyIncomeTotal(budget?.period)
   const hasPartner = !!partner
+  const [incomeExpanded, setIncomeExpanded] = useState(false)
 
   // Group budget items by type
   const groupedItems = useMemo(() => {
@@ -77,6 +83,15 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       savings: budget.budget_items.filter(item => item.type === 'savings'),
     }
   }, [budget])
+
+  // Calculate cashflow: budgeted expenses excluding credit card items
+  const cashflow = useMemo(() => {
+    if (!budget?.budget_items) return 0
+    const budgetMultiplier = viewMode === 'total' ? 1 : 0.5
+    return budget.budget_items
+      .filter(item => !item.is_ccm && (item.type === 'fixedExpense' || item.type === 'variableExpense'))
+      .reduce((sum, item) => sum + (item.amount * budgetMultiplier), 0)
+  }, [budget, viewMode])
 
   // Calculate actual spending per category based on view mode
   // - total: all expenses at full amount (household view)
@@ -402,8 +417,8 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
       >
         <Card className="border-0 shadow-sm">
           <CardContent className="p-3 text-center">
-            <p className="text-xs text-muted-foreground">Inkomst</p>
-            <p className="font-semibold text-sm">{formatCurrency(displayIncome)}</p>
+            <p className="text-xs text-muted-foreground">Kassaflöde</p>
+            <p className="font-semibold text-sm">{formatCurrency(cashflow)}</p>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
@@ -417,6 +432,97 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
             <p className="text-xs text-muted-foreground">Sparkvot</p>
             <p className="font-semibold text-sm text-success">{formatPercentage(displaySavingsRate)}</p>
           </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Expandable Income Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+      >
+        <Card className="border-0 shadow-sm">
+          <CardHeader
+            className="pb-2 cursor-pointer"
+            onClick={() => setIncomeExpanded(!incomeExpanded)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-stacka-sage/20 flex items-center justify-center">
+                  <Banknote className="w-4 h-4 text-stacka-olive" />
+                </div>
+                <CardTitle className="text-sm font-medium">Inkomst</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">
+                  {formatCurrency(incomeTotal?.total_income || budget.total_income)}
+                </p>
+                <ChevronDown className={cn(
+                  "w-4 h-4 text-muted-foreground transition-transform",
+                  incomeExpanded && "rotate-180"
+                )} />
+              </div>
+            </div>
+          </CardHeader>
+          <AnimatePresence>
+            {incomeExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <CardContent className="pt-0 space-y-2">
+                  {householdIncomes && householdIncomes.length > 0 ? (
+                    <>
+                      {/* Group incomes by person */}
+                      {(() => {
+                        const grouped = householdIncomes.reduce((acc, income) => {
+                          const key = income.owner_name
+                          if (!acc[key]) acc[key] = { incomes: [], total: 0, isOwn: income.is_own }
+                          acc[key].incomes.push(income)
+                          acc[key].total += income.amount
+                          return acc
+                        }, {} as Record<string, { incomes: typeof householdIncomes; total: number; isOwn: boolean }>)
+
+                        return Object.entries(grouped).map(([name, { incomes, total, isOwn }]) => (
+                          <div key={name} className="p-3 rounded-xl bg-muted/50">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className={cn(
+                                  "w-6 h-6 rounded-full flex items-center justify-center",
+                                  isOwn ? "bg-stacka-olive/20" : "bg-stacka-blue/20"
+                                )}>
+                                  {isOwn ? (
+                                    <User className="w-3 h-3 text-stacka-olive" />
+                                  ) : (
+                                    <UserCheck className="w-3 h-3 text-stacka-blue" />
+                                  )}
+                                </div>
+                                <span className="text-sm font-medium">{name}</span>
+                              </div>
+                              <span className="text-sm font-semibold">{formatCurrency(total)}</span>
+                            </div>
+                            {incomes.map((income) => (
+                              <div key={income.id} className="flex items-center justify-between text-xs text-muted-foreground ml-8">
+                                <span>{income.name}</span>
+                                <span>{formatCurrency(income.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ))
+                      })()}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Ingen inkomst registrerad
+                    </p>
+                  )}
+                </CardContent>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Card>
       </motion.div>
 

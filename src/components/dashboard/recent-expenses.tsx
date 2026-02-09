@@ -14,7 +14,7 @@ interface RecentExpensesProps {
 }
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',
@@ -98,13 +98,10 @@ export function RecentExpenses({ expenses }: RecentExpensesProps) {
               <div>
                 <p className={cn(
                   "font-semibold",
-                  expense.is_ccm ? "text-stacka-coral" : "text-foreground"
+                  expense.is_ccm ? "text-stacka-blue" : "text-foreground"
                 )}>
                   -{formatCurrency(expense.amount)}
                 </p>
-                {expense.is_ccm && (
-                  <span className="text-[10px] text-stacka-coral">Kreditkort</span>
-                )}
               </div>
             </div>
           </motion.div>
