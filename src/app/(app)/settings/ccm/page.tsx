@@ -21,7 +21,7 @@ import type { ExpenseWithCategory } from '@/types'
 import { GroupPurchaseWizard } from '@/components/ccm/group-purchase-wizard'
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',
@@ -477,22 +477,11 @@ export default function CCMDashboardPage() {
             <p className="text-sm text-muted-foreground">CCM-översikt</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setGroupPurchaseOpen(true)}
-            className="text-stacka-olive border-stacka-olive/30 hover:bg-stacka-olive/10"
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Gruppköp
+        <Link href="/settings/ccm/settings">
+          <Button variant="ghost" size="icon">
+            <Settings className="w-5 h-5" />
           </Button>
-          <Link href="/settings/ccm/settings">
-            <Button variant="ghost" size="icon">
-              <Settings className="w-5 h-5" />
-            </Button>
-          </Link>
-        </div>
+        </Link>
       </motion.div>
 
       {/* Summary Card */}
@@ -532,6 +521,22 @@ export default function CCMDashboardPage() {
             Ändra
           </Link>
         </div>
+      </motion.div>
+
+      {/* Group Purchase Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+      >
+        <Button
+          variant="outline"
+          onClick={() => setGroupPurchaseOpen(true)}
+          className="w-full text-stacka-olive border-stacka-olive/30 hover:bg-stacka-olive/10"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Gruppköp
+        </Button>
       </motion.div>
 
       {/* Invoice Periods */}

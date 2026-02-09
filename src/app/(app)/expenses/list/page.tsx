@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils/cn'
 import type { ExpenseWithCategory, CostType } from '@/types'
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',
@@ -176,13 +176,12 @@ export default function ExpenseListPage() {
                               <p className="font-medium text-sm">{expense.description}</p>
                               <p className="text-xs text-muted-foreground">
                                 {expense.category?.name}
-                                {expense.is_ccm && ' • Kreditkort'}
                               </p>
                             </div>
                           </div>
                           <span className={cn(
                             "font-semibold",
-                            expense.is_ccm ? "text-stacka-coral" : ""
+                            expense.is_ccm ? "text-stacka-blue" : ""
                           )}>
                             -{formatCurrency(expense.amount)}
                           </span>

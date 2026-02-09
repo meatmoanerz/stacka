@@ -53,7 +53,7 @@ import { Switch } from '@/components/ui/switch'
 import type { Category } from '@/types'
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',
@@ -397,7 +397,7 @@ export function RecurringExpensesList() {
                         <span
                           className={cn(
                             'font-semibold min-w-[70px] text-right',
-                            expense.is_ccm ? 'text-stacka-coral' : ''
+                            expense.is_ccm ? 'text-stacka-blue' : ''
                           )}
                         >
                           {formatCurrency(expense.amount)}

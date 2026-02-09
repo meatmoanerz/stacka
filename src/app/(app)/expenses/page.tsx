@@ -24,7 +24,7 @@ const tabs = [
 ]
 
 const categoryIcons: Record<string, string> = {
-  Mat: '🍔',
+  Mat: '🛒',
   Hem: '🏠',
   Kläder: '👕',
   Nöje: '🎬',
@@ -221,7 +221,7 @@ export default function AddExpensePage() {
                         )}
                         <span className={cn(
                           "font-semibold",
-                          expense.is_ccm ? "text-stacka-coral" : ""
+                          expense.is_ccm ? "text-stacka-blue" : ""
                         )}>
                           -{formatCurrency(expense.amount)}
                         </span>
