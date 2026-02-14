@@ -141,14 +141,10 @@ export default function DashboardPage() {
       .reduce((sum, item) => sum + item.amount, 0) || 0,
   }
 
-  // "Kvar att spendera" should show:
-  // - If budget exists: Total budgeted expenses - spent
-  // - If no budget: Total income - spent (what's actually available)
+  // KPIs are always budget-based, never income-based
   const hasBudget = !!(budget && (budgetItems.fixed + budgetItems.variable + budgetItems.savings) > 0)
   const totalBudgetedExpenses = budgetItems.fixed + budgetItems.variable
-  const availableToSpend = hasBudget 
-    ? totalBudgetedExpenses  // Budget amount for expenses
-    : totalIncome            // Full income when no budget
+  const availableToSpend = totalBudgetedExpenses
 
   const savingsRate = totalIncome > 0 
     ? (budgetItems.savings / totalIncome) * 100 

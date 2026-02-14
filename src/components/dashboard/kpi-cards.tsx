@@ -29,8 +29,9 @@ export function KPICards({
   const remaining = totalBudget - totalSpent
   const daysUntilSalary = getDaysUntilSalary(salaryDay)
   const periodProgress = getPeriodProgress(salaryDay)
-  const dailyBudget = daysUntilSalary > 0 ? remaining / daysUntilSalary : 0
+  const dailyBudget = daysUntilSalary > 0 && totalBudget > 0 ? remaining / daysUntilSalary : 0
   const spentPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0
+  const noBudget = totalBudget === 0
 
   // Calculate actual savings rate based on actual savings registered in savings categories
   // Actual = actualSavings / totalIncome * 100
@@ -42,22 +43,24 @@ export function KPICards({
   const cards = [
     {
       label: 'Kvar att spendera',
-      value: formatCurrency(remaining),
-      subtext: daysUntilSalary > 0 ? `${formatCurrency(dailyBudget)}/dag` : 'Ny period idag',
-      icon: remaining >= 0 ? TrendingUp : TrendingDown,
-      color: remaining >= 0 ? 'text-success' : 'text-destructive',
-      bgColor: remaining >= 0 ? 'bg-success/10' : 'bg-destructive/10',
+      value: noBudget ? '–' : formatCurrency(remaining),
+      subtext: noBudget
+        ? 'Ingen budget'
+        : daysUntilSalary > 0 ? `${formatCurrency(dailyBudget)}/dag` : 'Ny period idag',
+      icon: remaining >= 0 || noBudget ? TrendingUp : TrendingDown,
+      color: noBudget ? 'text-muted-foreground' : remaining >= 0 ? 'text-success' : 'text-destructive',
+      bgColor: noBudget ? 'bg-muted/50' : remaining >= 0 ? 'bg-success/10' : 'bg-destructive/10',
       cardBg: 'bg-gradient-to-br from-stacka-mint/30 to-white dark:from-stacka-mint/10 dark:to-card',
     },
     {
       label: 'Förbrukat',
       value: formatCurrency(totalSpent),
-      subtext: hasBudget
-        ? `${formatPercentage(spentPercentage)} av budget`
-        : `${formatPercentage(totalIncome > 0 ? (totalSpent / totalIncome) * 100 : 0)} av inkomst`,
+      subtext: noBudget
+        ? '–'
+        : `${formatPercentage(spentPercentage)} av budget`,
       icon: TrendingDown,
-      color: isOverBudget ? 'text-warning' : 'text-stacka-olive',
-      bgColor: isOverBudget ? 'bg-warning/10' : 'bg-stacka-sage/20',
+      color: noBudget ? 'text-stacka-olive' : isOverBudget ? 'text-warning' : 'text-stacka-olive',
+      bgColor: noBudget ? 'bg-stacka-sage/20' : isOverBudget ? 'bg-warning/10' : 'bg-stacka-sage/20',
       cardBg: 'bg-gradient-to-br from-stacka-peach/30 to-white dark:from-stacka-coral/10 dark:to-card',
     },
     {
