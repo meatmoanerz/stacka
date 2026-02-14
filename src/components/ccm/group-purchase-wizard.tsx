@@ -30,8 +30,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { Category } from '@/types'
 
 type WizardStep = 'total' | 'shares' | 'swish-recipient' | 'review'
-type ShareMode = 'equal' | 'manual' | 'user-only'
-
 interface GroupPurchaseWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -50,7 +48,6 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [userShare, setUserShare] = useState('')
   const [partnerShare, setPartnerShare] = useState('')
-  const [shareMode, setShareMode] = useState<ShareMode>('equal')
   const [swishRecipient, setSwishRecipient] = useState<'user' | 'partner' | 'shared'>('user')
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [categorySearch, setCategorySearch] = useState('')
@@ -98,13 +95,8 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
   const goNext = () => {
     if (currentStep === 'total') {
       setCurrentStep('shares')
-      // Default shares based on mode
-      if (shareMode === 'equal' && hasPartner) {
-        const half = Math.round(totalNum / 2)
-        setUserShare(half.toString())
-        setPartnerShare(half.toString())
-      } else if (!hasPartner) {
-        setUserShare(totalNum.toString())
+      // Start with empty fields so "Övriga" shows full total
+      if (!hasPartner) {
         setPartnerShare('0')
       }
     } else if (currentStep === 'shares') {
@@ -158,7 +150,6 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
     setDate(format(new Date(), 'yyyy-MM-dd'))
     setUserShare('')
     setPartnerShare('')
-    setShareMode('equal')
     setSwishRecipient('user')
     setCategorySearch('')
     setCategoryOpen(false)
@@ -169,8 +160,8 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
       return totalNum > 0 && description.length > 0 && categoryId.length > 0
     }
     if (currentStep === 'shares') {
-      return userShareNum + partnerShareNum <= totalNum &&
-             userShareNum + partnerShareNum > 0
+      // Sum of all three parts must equal total, and at least jag or partner must pay something
+      return swishAmount >= 0 && (userShareNum + partnerShareNum) > 0
     }
     if (currentStep === 'swish-recipient') {
       return true
@@ -204,20 +195,6 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
       return format(d, 'd MMMM yyyy', { locale: sv })
     } catch {
       return dateStr
-    }
-  }
-
-  const handleShareModeChange = (mode: ShareMode) => {
-    setShareMode(mode)
-    if (mode === 'equal' && hasPartner) {
-      const half = Math.round(totalNum / 2)
-      setUserShare(half.toString())
-      setPartnerShare(half.toString())
-    } else if (mode === 'user-only') {
-      setUserShare(totalNum.toString())
-      setPartnerShare('0')
-    } else if (mode === 'manual') {
-      // Let user enter manually
     }
   }
 
@@ -356,7 +333,7 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
               </motion.div>
             )}
 
-            {/* Step 2: Shares */}
+            {/* Step 2: Dela upp kostnad */}
             {currentStep === 'shares' && (
               <motion.div
                 key="step2"
@@ -366,55 +343,22 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
                 transition={{ duration: 0.15 }}
                 className="space-y-4"
               >
+                <p className="text-base font-semibold">Dela upp kostnad</p>
+
                 <div className="p-4 bg-stacka-mint/20 dark:bg-stacka-olive/10 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Totalt betalat</p>
+                  <p className="text-sm text-muted-foreground">Totalt belopp</p>
                   <p className="text-2xl font-bold text-stacka-olive">
                     {formatCurrency(totalNum)}
                   </p>
                 </div>
 
-                <p className="text-sm text-muted-foreground">
-                  Hur mycket är er faktiska andel?
-                </p>
+                <div className="border-t border-border" />
 
-                {/* Share mode selector */}
-                {hasPartner && (
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      type="button"
-                      variant={shareMode === 'equal' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleShareModeChange('equal')}
-                      className={shareMode === 'equal' ? 'bg-stacka-olive hover:bg-stacka-olive/90' : ''}
-                    >
-                      Dela lika
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={shareMode === 'manual' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleShareModeChange('manual')}
-                      className={shareMode === 'manual' ? 'bg-stacka-olive hover:bg-stacka-olive/90' : ''}
-                    >
-                      Manuellt
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={shareMode === 'user-only' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => handleShareModeChange('user-only')}
-                      className={shareMode === 'user-only' ? 'bg-stacka-olive hover:bg-stacka-olive/90' : ''}
-                    >
-                      Bara jag
-                    </Button>
-                  </div>
-                )}
-
-                {/* User share */}
+                {/* Jag betalar */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <User className="w-3.5 h-3.5" />
-                    {user?.first_name || 'Din'} andel
+                    Jag betalar
                   </Label>
                   <div className="relative">
                     <input
@@ -425,22 +369,20 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
                       onChange={(e) => {
                         const val = e.target.value.replace(/\D/g, '')
                         setUserShare(val)
-                        if (shareMode === 'equal') setShareMode('manual')
                       }}
                       placeholder="0"
                       className="w-full h-10 px-3 rounded-lg bg-muted/50 border border-border focus:border-stacka-olive focus:ring-1 focus:ring-stacka-olive outline-none transition-colors text-sm font-medium"
-                      disabled={shareMode === 'equal'}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr</span>
                   </div>
                 </div>
 
-                {/* Partner share */}
+                {/* Partner betalar */}
                 {hasPartner && (
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <UserCheck className="w-3.5 h-3.5" />
-                      {partner?.first_name || 'Partner'}s andel
+                      Partner betalar
                     </Label>
                     <div className="relative">
                       <input
@@ -451,36 +393,55 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
                         onChange={(e) => {
                           const val = e.target.value.replace(/\D/g, '')
                           setPartnerShare(val)
-                          if (shareMode === 'equal') setShareMode('manual')
                         }}
                         placeholder="0"
                         className="w-full h-10 px-3 rounded-lg bg-muted/50 border border-border focus:border-stacka-olive focus:ring-1 focus:ring-stacka-olive outline-none transition-colors text-sm font-medium"
-                        disabled={shareMode === 'equal'}
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr</span>
                     </div>
                   </div>
                 )}
 
-                {/* Swish summary */}
+                {/* Övriga/ingen betalar (readonly, auto-calculated) */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="w-3.5 h-3.5" />
+                    Övriga/ingen betalar
+                  </Label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={swishAmount >= 0 ? swishAmount.toString() : swishAmount.toString()}
+                      readOnly
+                      className="w-full h-10 px-3 rounded-lg bg-muted/80 border border-border text-sm font-medium text-muted-foreground cursor-not-allowed"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">kr</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Beräknas automatiskt</p>
+                </div>
+
+                <div className="border-t border-border" />
+
+                {/* Summa validation row */}
                 <div className={cn(
-                  "p-3 rounded-lg border",
-                  swishAmount > 0
-                    ? "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800"
-                    : "bg-muted/50 border-border"
+                  "p-3 rounded-lg border flex items-center justify-between",
+                  swishAmount >= 0
+                    ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                    : "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
                 )}>
-                  <p className="text-sm font-medium">Swish tillbaka</p>
-                  <p className={cn(
-                    "text-xl font-bold",
-                    swishAmount > 0 ? "text-stacka-olive" : "text-muted-foreground"
-                  )}>
-                    {formatCurrency(Math.max(0, swishAmount))}
-                  </p>
-                  {swishAmount < 0 && (
-                    <p className="text-xs text-destructive mt-1">
-                      Andelarna överskrider totalbeloppet
+                  <div>
+                    <p className={cn(
+                      "text-sm font-semibold",
+                      swishAmount >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                    )}>
+                      Summa: {formatCurrency(userShareNum + partnerShareNum + Math.max(0, swishAmount))} {swishAmount >= 0 ? '✓' : '✗'}
                     </p>
-                  )}
+                    {swishAmount < 0 && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                        Summan överstiger totalbeloppet
+                      </p>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}

@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 import type { ExpenseWithCategory } from '@/types'
 import { GroupPurchaseWizard } from '@/components/ccm/group-purchase-wizard'
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 
 const categoryIcons: Record<string, string> = {
   Mat: '🛒',
@@ -152,9 +153,10 @@ interface InvoicePeriodCardProps {
   partner: { id: string; first_name: string | null } | null
   onDelete: (id: string, description: string) => void
   onUpdateInvoice: (period: string, amount: number) => void
+  onEdit: (expense: ExpenseWithCategory) => void
 }
 
-function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete, onUpdateInvoice }: InvoicePeriodCardProps) {
+function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete, onUpdateInvoice, onEdit }: InvoicePeriodCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [editingAmount, setEditingAmount] = useState(false)
   const [invoiceInput, setInvoiceInput] = useState(invoice?.actual_amount?.toString() || '')
@@ -319,9 +321,10 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                   <div
                     key={expense.id}
                     className={cn(
-                      "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors",
+                      "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer",
                       index !== expenses.length - 1 && "border-b border-border"
                     )}
+                    onClick={() => onEdit(expense)}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-stacka-coral/10 flex items-center justify-center text-lg">
@@ -386,6 +389,8 @@ export default function CCMDashboardPage() {
   const deleteExpense = useDeleteExpense()
   const upsertInvoice = useUpsertCCMInvoice()
   const [groupPurchaseOpen, setGroupPurchaseOpen] = useState(false)
+  const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   const groupedExpenses = useMemo(() => {
     return groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
@@ -413,6 +418,11 @@ export default function CCMDashboardPage() {
     } catch {
       toast.error('Kunde inte spara fakturabelopp')
     }
+  }
+
+  const handleEdit = (expense: ExpenseWithCategory) => {
+    setEditExpense(expense)
+    setEditModalOpen(true)
   }
 
   if (userLoading || expensesLoading) {
@@ -573,6 +583,7 @@ export default function CCMDashboardPage() {
                 partner={partner ? { id: partner.id, first_name: partner.first_name } : null}
                 onDelete={handleDelete}
                 onUpdateInvoice={handleUpdateInvoice}
+                onEdit={handleEdit}
               />
             </motion.div>
           ))}
@@ -582,6 +593,12 @@ export default function CCMDashboardPage() {
       <GroupPurchaseWizard
         open={groupPurchaseOpen}
         onOpenChange={setGroupPurchaseOpen}
+      />
+
+      <ExpenseEditDialog
+        expense={editExpense}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
       />
     </div>
   )

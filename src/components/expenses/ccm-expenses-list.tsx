@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useCCMExpenses, groupExpensesByInvoicePeriod } from '@/hooks/use-expenses'
@@ -14,6 +14,8 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import Link from 'next/link'
+import type { ExpenseWithCategory } from '@/types'
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 
 const categoryIcons: Record<string, string> = {
   Mat: '🛒',
@@ -48,6 +50,8 @@ export function CCMExpensesList() {
   const invoiceBreakDate = user?.ccm_invoice_break_date || 1
   const { data: ccmExpenses = [], isLoading } = useCCMExpenses(invoiceBreakDate)
   const deleteExpense = useDeleteExpense()
+  const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editModalOpen, setEditModalOpen] = useState(false)
 
   const groupedExpenses = useMemo(() => {
     return groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
@@ -192,9 +196,13 @@ export function CCMExpensesList() {
                   <div
                     key={expense.id}
                     className={cn(
-                      "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors",
+                      "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer",
                       index !== expenses.length - 1 && "border-b border-border"
                     )}
+                    onClick={() => {
+                      setEditExpense(expense)
+                      setEditModalOpen(true)
+                    }}
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-stacka-coral/10 flex items-center justify-center text-lg">
@@ -225,7 +233,10 @@ export function CCMExpensesList() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(expense.id, expense.description)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(expense.id, expense.description)
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -237,6 +248,12 @@ export function CCMExpensesList() {
           </motion.div>
         )
       })}
+
+      <ExpenseEditDialog
+        expense={editExpense}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+      />
     </div>
   )
 }
