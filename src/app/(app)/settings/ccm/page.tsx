@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { LoadingPage } from '@/components/shared/loading-spinner'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ExpenseEditDialog } from '@/components/expenses/expense-edit-dialog'
 import { ArrowLeft, CreditCard, Settings, AlertTriangle, Users, UserCheck, Trash2, ChevronDown, ChevronUp, Calendar, Check, Receipt, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency, formatRelativeDate } from '@/lib/utils/formatters'
@@ -151,10 +152,11 @@ interface InvoicePeriodCardProps {
   user: { id: string; first_name: string | null }
   partner: { id: string; first_name: string | null } | null
   onDelete: (id: string, description: string) => void
+  onEdit: (expense: ExpenseWithCategory) => void
   onUpdateInvoice: (period: string, amount: number) => void
 }
 
-function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete, onUpdateInvoice }: InvoicePeriodCardProps) {
+function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete, onEdit, onUpdateInvoice }: InvoicePeriodCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [editingAmount, setEditingAmount] = useState(false)
   const [invoiceInput, setInvoiceInput] = useState(invoice?.actual_amount?.toString() || '')
@@ -316,10 +318,12 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                 </div>
               ) : (
                 expenses.map((expense, index) => (
-                  <div
+                  <button
                     key={expense.id}
+                    type="button"
+                    onClick={() => onEdit(expense)}
                     className={cn(
-                      "flex items-center justify-between p-4 hover:bg-muted/30 transition-colors",
+                      "flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all w-full text-left cursor-pointer",
                       index !== expenses.length - 1 && "border-b border-border"
                     )}
                   >
@@ -365,7 +369,7 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
+                  </button>
                 ))
               )}
             </CardContent>
@@ -386,6 +390,13 @@ export default function CCMDashboardPage() {
   const deleteExpense = useDeleteExpense()
   const upsertInvoice = useUpsertCCMInvoice()
   const [groupPurchaseOpen, setGroupPurchaseOpen] = useState(false)
+  const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  const handleEditExpense = (expense: ExpenseWithCategory) => {
+    setEditExpense(expense)
+    setEditDialogOpen(true)
+  }
 
   const groupedExpenses = useMemo(() => {
     return groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
@@ -572,6 +583,7 @@ export default function CCMDashboardPage() {
                 user={{ id: user.id, first_name: user.first_name }}
                 partner={partner ? { id: partner.id, first_name: partner.first_name } : null}
                 onDelete={handleDelete}
+                onEdit={handleEditExpense}
                 onUpdateInvoice={handleUpdateInvoice}
               />
             </motion.div>
@@ -582,6 +594,12 @@ export default function CCMDashboardPage() {
       <GroupPurchaseWizard
         open={groupPurchaseOpen}
         onOpenChange={setGroupPurchaseOpen}
+      />
+
+      <ExpenseEditDialog
+        expense={editExpense}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
       />
     </div>
   )
