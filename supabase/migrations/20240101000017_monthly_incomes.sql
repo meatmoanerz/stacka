@@ -21,32 +21,33 @@ CREATE INDEX IF NOT EXISTS idx_monthly_incomes_user_period ON monthly_incomes(us
 -- Enable RLS
 ALTER TABLE monthly_incomes ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy: Users can view their own monthly incomes
+-- RLS Policies (drop first for idempotency)
+DROP POLICY IF EXISTS "Users can view own monthly incomes" ON monthly_incomes;
 CREATE POLICY "Users can view own monthly incomes"
   ON monthly_incomes FOR SELECT
   TO authenticated
   USING (user_id = auth.uid());
 
--- RLS Policy: Users can view partner's monthly incomes
+DROP POLICY IF EXISTS "Users can view partner monthly incomes" ON monthly_incomes;
 CREATE POLICY "Users can view partner monthly incomes"
   ON monthly_incomes FOR SELECT
   TO authenticated
   USING (user_id = get_partner_id(auth.uid()));
 
--- RLS Policy: Users can insert their own monthly incomes
+DROP POLICY IF EXISTS "Users can insert own monthly incomes" ON monthly_incomes;
 CREATE POLICY "Users can insert own monthly incomes"
   ON monthly_incomes FOR INSERT
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
--- RLS Policy: Users can update their own monthly incomes
+DROP POLICY IF EXISTS "Users can update own monthly incomes" ON monthly_incomes;
 CREATE POLICY "Users can update own monthly incomes"
   ON monthly_incomes FOR UPDATE
   TO authenticated
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
--- RLS Policy: Users can delete their own monthly incomes
+DROP POLICY IF EXISTS "Users can delete own monthly incomes" ON monthly_incomes;
 CREATE POLICY "Users can delete own monthly incomes"
   ON monthly_incomes FOR DELETE
   TO authenticated
@@ -149,6 +150,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS monthly_incomes_updated_at ON monthly_incomes;
 CREATE TRIGGER monthly_incomes_updated_at
   BEFORE UPDATE ON monthly_incomes
   FOR EACH ROW

@@ -11,7 +11,7 @@ import { getCurrentBudgetPeriod, formatPeriodDisplay } from '@/lib/utils/budget-
 import { KPICards } from '@/components/dashboard/kpi-cards'
 import { BudgetOverview } from '@/components/dashboard/budget-overview'
 import { RecentExpenses } from '@/components/dashboard/recent-expenses'
-import { RecurringExpensesWidget } from '@/components/dashboard/recurring-expenses-widget'
+import { ShowMyMonthCard } from '@/components/dashboard/show-my-month-card'
 import { PersonBudgetBreakdown } from '@/components/dashboard/person-budget-breakdown'
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton'
 import { motion } from 'framer-motion'
@@ -201,8 +201,8 @@ export default function DashboardPage() {
         />
       </motion.div>
 
-      {/* Recurring Expenses Widget */}
-      <RecurringExpensesWidget />
+      {/* Monthly Report CTA */}
+      <ShowMyMonthCard />
 
       {/* Recent Expenses */}
       <motion.div

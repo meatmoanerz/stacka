@@ -23,7 +23,8 @@ import {
   Shield,
   Palette,
   FileSearch,
-  Wallet
+  Wallet,
+  Home
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
@@ -44,6 +45,7 @@ const menuItems = [
       { href: '/settings/ccm', label: 'Kreditkortshanterare', icon: CreditCard, description: 'CCM-inställningar' },
       { href: '/savings', label: 'Sparmål', icon: Target, description: 'Dina besparingsmål' },
       { href: '/settings/shared-account', label: 'Gemensamt konto', icon: Wallet, description: 'Beräkna överföring' },
+      { href: '/settings/household-categories', label: 'Hushållskostnader', icon: Home, description: 'Kategorier för hushållskostnader' },
     ]
   },
   {
