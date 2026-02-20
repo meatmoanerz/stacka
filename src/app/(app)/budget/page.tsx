@@ -143,18 +143,14 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
     if (!expenses) return 0
 
     if (hasPartner) {
-      // Total household spend - count all expenses at full amount (excluding savings)
+      // Total household spend - count all expenses at full amount (including savings)
       return expenses.reduce((sum, expense) => {
-        // Exclude savings category expenses
-        if (expense.category?.cost_type === 'Savings') return sum
         return sum + expense.amount
       }, 0)
     }
 
-    // User's portion only (no partner), excluding savings
+    // User's portion only (no partner), including savings
     return expenses.reduce((sum, expense) => {
-      // Exclude savings category expenses
-      if (expense.category?.cost_type === 'Savings') return sum
       const assignment = expense.cost_assignment || 'personal'
 
       if (assignment === 'personal') {

@@ -87,12 +87,9 @@ export default function DashboardPage() {
     ? monthlyTotal
     : (householdIncome?.total_income ?? 0)
 
-  // Calculate TOTAL spent (household view - sum of expenses, excluding savings)
+  // Calculate TOTAL spent (household view - sum of all expenses including savings)
   // When partners are connected, dashboard shows total household expenses
-  // Exclude savings category expenses - they're set aside, not "spent"
   const totalSpent = expenses.reduce((sum, exp) => {
-    // Exclude savings category expenses from totalSpent
-    if (exp.category?.cost_type === 'Savings') return sum
     return sum + exp.amount
   }, 0)
 
@@ -100,20 +97,15 @@ export default function DashboardPage() {
   // - personal: full amount
   // - shared: 50% of the amount (split with partner)
   // - partner: 0 (doesn't count toward user's budget, partner pays)
-  // Excludes savings category expenses
   const userSpent = expenses.reduce((sum, exp) => {
-    // Exclude savings category expenses
-    if (exp.category?.cost_type === 'Savings') return sum
     const assignment = exp.cost_assignment || 'personal'
     if (assignment === 'partner') return sum // Partner pays, not user
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
     return sum + exp.amount // personal - full amount
   }, 0)
 
-  // Calculate partner's portion of expenses (excludes savings)
+  // Calculate partner's portion of expenses
   const partnerSpent = expenses.reduce((sum, exp) => {
-    // Exclude savings category expenses
-    if (exp.category?.cost_type === 'Savings') return sum
     const assignment = exp.cost_assignment || 'personal'
     if (assignment === 'personal') return sum // User pays, not partner
     if (assignment === 'shared') return sum + (exp.amount / 2) // 50/50 split
@@ -143,8 +135,10 @@ export default function DashboardPage() {
 
   // KPIs are always budget-based, never income-based
   const hasBudget = !!(budget && (budgetItems.fixed + budgetItems.variable + budgetItems.savings) > 0)
-  const totalBudgetedExpenses = budgetItems.fixed + budgetItems.variable
-  const availableToSpend = totalBudgetedExpenses
+  const totalBudgetedExpenses = budgetItems.fixed + budgetItems.variable + budgetItems.savings
+  const availableToSpend = hasBudget
+    ? totalBudgetedExpenses  // Budget amount for expenses
+    : totalIncome            // Full income when no budget
 
   const savingsRate = totalIncome > 0 
     ? (budgetItems.savings / totalIncome) * 100 

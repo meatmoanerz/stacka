@@ -318,10 +318,12 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                 </div>
               ) : (
                 expenses.map((expense, index) => (
-                  <button
+                  <div
                     key={expense.id}
-                    type="button"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onEdit(expense)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(expense) } }}
                     className={cn(
                       "flex items-center justify-between p-4 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all w-full text-left cursor-pointer",
                       index !== expenses.length - 1 && "border-b border-border"
@@ -369,7 +371,7 @@ function InvoicePeriodCard({ period, expenses, invoice, user, partner, onDelete,
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </button>
+                  </div>
                 ))
               )}
             </CardContent>
@@ -392,10 +394,17 @@ export default function CCMDashboardPage() {
   const [groupPurchaseOpen, setGroupPurchaseOpen] = useState(false)
   const [editExpense, setEditExpense] = useState<ExpenseWithCategory | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editGroupPurchase, setEditGroupPurchase] = useState<ExpenseWithCategory | null>(null)
+  const [editGroupPurchaseOpen, setEditGroupPurchaseOpen] = useState(false)
 
   const handleEditExpense = (expense: ExpenseWithCategory) => {
-    setEditExpense(expense)
-    setEditDialogOpen(true)
+    if (expense.is_group_purchase) {
+      setEditGroupPurchase(expense)
+      setEditGroupPurchaseOpen(true)
+    } else {
+      setEditExpense(expense)
+      setEditDialogOpen(true)
+    }
   }
 
   const groupedExpenses = useMemo(() => {
@@ -534,7 +543,6 @@ export default function CCMDashboardPage() {
         </div>
       </motion.div>
 
-      {/* Group Purchase Button */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -594,6 +602,15 @@ export default function CCMDashboardPage() {
       <GroupPurchaseWizard
         open={groupPurchaseOpen}
         onOpenChange={setGroupPurchaseOpen}
+      />
+
+      <GroupPurchaseWizard
+        open={editGroupPurchaseOpen}
+        onOpenChange={(open) => {
+          setEditGroupPurchaseOpen(open)
+          if (!open) setEditGroupPurchase(null)
+        }}
+        editExpense={editGroupPurchase}
       />
 
       <ExpenseEditDialog

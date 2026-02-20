@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { useCategoriesByType } from '@/hooks/use-categories'
-import { useCreateGroupPurchase } from '@/hooks/use-group-purchase'
+import { useCreateGroupPurchase, useUpdateGroupPurchase } from '@/hooks/use-group-purchase'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
@@ -27,20 +27,23 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { Category } from '@/types'
+import type { Category, ExpenseWithCategory } from '@/types'
 
 type WizardStep = 'total' | 'shares' | 'swish-recipient' | 'review'
 
 interface GroupPurchaseWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  editExpense?: ExpenseWithCategory | null
 }
 
-export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardProps) {
+export function GroupPurchaseWizard({ open, onOpenChange, editExpense }: GroupPurchaseWizardProps) {
   const { data: user } = useUser()
   const { data: partner } = usePartner()
   const { variable, fixed, savings } = useCategoriesByType()
   const createGroupPurchase = useCreateGroupPurchase()
+  const updateGroupPurchase = useUpdateGroupPurchase()
+  const isEditMode = !!editExpense
 
   const [currentStep, setCurrentStep] = useState<WizardStep>('total')
   const [totalAmount, setTotalAmount] = useState('')
@@ -82,6 +85,20 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
       setTimeout(() => amountInputRef.current?.focus(), 100)
     }
   }, [open, currentStep])
+
+  // Pre-fill fields when editing an existing group purchase
+  useEffect(() => {
+    if (editExpense && open) {
+      setTotalAmount((editExpense.group_purchase_total || editExpense.amount).toString())
+      setDescription(editExpense.description)
+      setCategoryId(editExpense.category_id)
+      setDate(editExpense.date)
+      setUserShare((editExpense.group_purchase_user_share || 0).toString())
+      setPartnerShare((editExpense.group_purchase_partner_share || 0).toString())
+      setSwishRecipient((editExpense.group_purchase_swish_recipient as 'user' | 'partner' | 'shared') || 'user')
+      setCurrentStep('total')
+    }
+  }, [editExpense, open])
 
   // Close category dropdown when clicking outside
   useEffect(() => {
@@ -129,7 +146,7 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
 
   const handleSubmit = async () => {
     try {
-      await createGroupPurchase.mutateAsync({
+      const payload = {
         totalAmount: totalNum,
         description,
         category_id: categoryId,
@@ -137,7 +154,13 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
         userShare: userShareNum,
         partnerShare: partnerShareNum,
         swishRecipient,
-      })
+      }
+
+      if (isEditMode && editExpense) {
+        await updateGroupPurchase.mutateAsync({ id: editExpense.id, ...payload })
+      } else {
+        await createGroupPurchase.mutateAsync(payload)
+      }
       onOpenChange(false)
       resetWizard()
     } catch {
@@ -210,7 +233,7 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5 text-stacka-olive" />
-            Lägg till gruppköp
+            {isEditMode ? 'Redigera gruppköp' : 'Lägg till gruppköp'}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             Steg {getStepNumber()} av {getTotalSteps()}
@@ -641,7 +664,7 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
                 type="button"
                 variant="outline"
                 onClick={goBack}
-                disabled={createGroupPurchase.isPending}
+                disabled={createGroupPurchase.isPending || updateGroupPurchase.isPending}
               >
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Tillbaka
@@ -655,9 +678,9 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
                 currentStep === 'review' && "bg-stacka-olive hover:bg-stacka-olive/90"
               )}
               onClick={currentStep === 'review' ? handleSubmit : goNext}
-              disabled={!isStepValid() || createGroupPurchase.isPending}
+              disabled={!isStepValid() || createGroupPurchase.isPending || updateGroupPurchase.isPending}
             >
-              {createGroupPurchase.isPending ? (
+              {(createGroupPurchase.isPending || updateGroupPurchase.isPending) ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Sparar...
@@ -665,7 +688,7 @@ export function GroupPurchaseWizard({ open, onOpenChange }: GroupPurchaseWizardP
               ) : currentStep === 'review' ? (
                 <>
                   <Check className="w-4 h-4 mr-2" />
-                  Skapa gruppköp
+                  {isEditMode ? 'Spara ändringar' : 'Skapa gruppköp'}
                 </>
               ) : (
                 <>

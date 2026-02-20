@@ -195,6 +195,31 @@ export function useUpdateTransactionCostAssignment() {
   })
 }
 
+export function useUpdateTransactionDescription() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      transactionId,
+      description
+    }: {
+      transactionId: string
+      description: string
+    }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase.from('statement_transactions') as any)
+        .update({ description })
+        .eq('id', transactionId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['statement-transactions'] })
+    }
+  })
+}
+
 export function useUpdateTransactionAmount() {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -259,7 +284,7 @@ export function useImportTransactions() {
       userId: string
     }) => {
       const validTransactions = transactions.filter(t =>
-        t.confirmed_category_id && !t.is_saved && t.is_expense
+        t.confirmed_category_id && !t.is_saved
       )
 
       if (validTransactions.length === 0) {
