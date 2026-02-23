@@ -146,7 +146,7 @@ export function useHasIncomeForCurrentPeriod() {
   })
 }
 
-// Create monthly income
+// Create monthly income (supports creating for partner via userId param)
 export function useCreateMonthlyIncome() {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -156,14 +156,17 @@ export function useCreateMonthlyIncome() {
       period: string
       name: string
       amount: number
+      userId?: string
     }) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
+      const targetUserId = income.userId || user.id
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from('monthly_incomes') as any)
         .insert({
-          user_id: user.id,
+          user_id: targetUserId,
           period: income.period,
           name: income.name,
           amount: income.amount,

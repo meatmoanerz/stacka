@@ -74,8 +74,8 @@ export function useReportHistory(salaryDay: number) {
         }
       }
 
-      // Bucket expenses into periods
-      const allExpenses = (expenses || []) as ExpenseWithCategory[]
+      // Bucket expenses into periods, excluding CCM expenses to avoid double counting
+      const allExpenses = ((expenses || []) as ExpenseWithCategory[]).filter(exp => !exp.is_ccm)
       const summaries: PeriodSummary[] = periods.map(p => {
         const { startDate, endDate } = getPeriodDates(p.period, salaryDay)
         const periodExpenses = allExpenses.filter(exp => {

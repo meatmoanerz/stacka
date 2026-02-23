@@ -33,10 +33,14 @@ export default function ReportPage() {
   const isCurrentPeriod = selectedPeriod === currentPeriod.period
 
   // Data for selected period
-  const { data: expenses = [], isLoading: expLoading } = useExpensesByPeriod(selectedPeriod, salaryDay)
+  const { data: allExpenses = [], isLoading: expLoading } = useExpensesByPeriod(selectedPeriod, salaryDay)
   const { data: budget } = useBudgetByPeriod(selectedPeriod)
   const { data: incomeTotal } = useMonthlyIncomeTotal(selectedPeriod)
   const { data: historySummaries = [] } = useReportHistory(salaryDay)
+
+  // Exclude CCM expenses to avoid double counting
+  // (they'll be counted when the credit card invoice arrives)
+  const expenses = allExpenses.filter(exp => !exp.is_ccm)
 
   const totalIncome = incomeTotal?.total_income ?? 0
   const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0)

@@ -12,7 +12,7 @@ import {
   useDeleteMonthlyIncome,
   useCopyPreviousPeriodIncomes,
 } from '@/hooks/use-monthly-incomes'
-import { useUser } from '@/hooks/use-user'
+import { useUser, usePartner } from '@/hooks/use-user'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { getCurrentBudgetPeriod, getNextPeriods, formatPeriodDisplay } from '@/lib/utils/budget-period'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +24,7 @@ import type { HouseholdMonthlyIncome } from '@/types'
 export default function MonthlyIncomePage() {
   const searchParams = useSearchParams()
   const { data: user } = useUser()
+  const { data: partner } = usePartner()
   const salaryDay = user?.salary_day || 25
 
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
@@ -43,8 +44,6 @@ export default function MonthlyIncomePage() {
   const partnerIncomes = useMemo(() => incomes.filter(i => !i.is_own), [incomes])
 
   const handleDelete = async (income: HouseholdMonthlyIncome) => {
-    if (!income.is_own) return
-
     try {
       await deleteIncome.mutateAsync({ id: income.id, period: selectedPeriod })
       toast.success(`"${income.name}" borttagen`)
@@ -154,6 +153,8 @@ export default function MonthlyIncomePage() {
               period={selectedPeriod}
               editingIncome={editingIncome}
               onEditComplete={handleEditComplete}
+              user={user}
+              partner={partner}
             />
           </CardContent>
         </Card>
@@ -201,7 +202,9 @@ export default function MonthlyIncomePage() {
                   key={income.id}
                   income={income}
                   isLast={index === partnerIncomes.length - 1}
-                  readonly
+                  onEdit={() => setEditingIncome(income)}
+                  onDelete={() => handleDelete(income)}
+                  isDeleting={deleteIncome.isPending}
                 />
               ))}
             </CardContent>

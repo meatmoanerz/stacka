@@ -355,6 +355,7 @@
     "incomeType": "Typ av inkomst",
     "selectType": "Välj typ av inkomst",
     "searchOrWrite": "Sök eller skriv egen...",
+    "appliesTo": "Gäller",
     "amount": "Belopp",
     "period": "Period",
     "incomeSaved": "Inkomst sparad",

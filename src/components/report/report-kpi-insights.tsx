@@ -46,9 +46,10 @@ export function ReportKpiInsights({
     ? ((totalSpent - previousSummary.totalExpenses) / previousSummary.totalExpenses) * 100
     : null
 
-  // 3. Largest expense
-  const largestExpense = expenses.length > 0
-    ? expenses.reduce((max, exp) => exp.amount > max.amount ? exp : max, expenses[0])
+  // 3. Largest expense (exclude credit card invoices since they're a collection of expenses)
+  const nonCCExpenses = expenses.filter(e => e.category?.name !== 'Kreditkort')
+  const largestExpense = nonCCExpenses.length > 0
+    ? nonCCExpenses.reduce((max, exp) => exp.amount > max.amount ? exp : max, nonCCExpenses[0])
     : null
 
   // 4. Fixed vs Variable ratio

@@ -14,7 +14,7 @@ import {
 import { toast } from 'sonner'
 import { Loader2, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { HouseholdMonthlyIncome } from '@/types'
+import type { HouseholdMonthlyIncome, Profile } from '@/types'
 
 const incomeSchema = z.object({
   name: z.string().min(1, 'Typ av inkomst krävs'),
@@ -27,23 +27,38 @@ interface MonthlyIncomeFormProps {
   period: string
   editingIncome?: HouseholdMonthlyIncome | null
   onEditComplete?: () => void
+  user?: Profile | null
+  partner?: Profile | null
 }
 
 export function MonthlyIncomeForm({
   period,
   editingIncome,
   onEditComplete,
+  user,
+  partner,
 }: MonthlyIncomeFormProps) {
   const createIncome = useCreateMonthlyIncome()
   const updateIncome = useUpdateMonthlyIncome()
   const [amountDisplay, setAmountDisplay] = useState('')
   const [typeSearch, setTypeSearch] = useState('')
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined)
   const amountInputRef = useRef<HTMLInputElement>(null)
   const typeInputRef = useRef<HTMLInputElement>(null)
   const typeDropdownRef = useRef<HTMLDivElement>(null)
 
   const isEditing = !!editingIncome
+  const hasPartner = !!partner
+
+  // When editing, set selectedUserId to the income's owner
+  useEffect(() => {
+    if (editingIncome) {
+      setSelectedUserId(editingIncome.user_id)
+    } else {
+      setSelectedUserId(undefined)
+    }
+  }, [editingIncome])
 
   const form = useForm<IncomeFormData>({
     resolver: zodResolver(incomeSchema),
@@ -131,6 +146,7 @@ export function MonthlyIncomeForm({
           period,
           name: data.name,
           amount: data.amount,
+          userId: selectedUserId,
         })
         toast.success('Inkomst sparad')
       }
@@ -138,6 +154,7 @@ export function MonthlyIncomeForm({
       // Reset form
       setAmountDisplay('')
       setTypeSearch('')
+      setSelectedUserId(undefined)
       form.reset({
         name: '',
         amount: 0,
@@ -150,6 +167,7 @@ export function MonthlyIncomeForm({
   const handleCancel = () => {
     setAmountDisplay('')
     setTypeSearch('')
+    setSelectedUserId(undefined)
     form.reset({
       name: '',
       amount: 0,
@@ -162,6 +180,11 @@ export function MonthlyIncomeForm({
 
   // Common input styles
   const inputStyles = "w-full h-11 px-4 rounded-xl bg-muted text-sm transition-colors focus:outline-none focus:ring-0 focus:border-0"
+
+  // Resolve display name for person selector
+  const userName = user?.first_name || 'Du'
+  const partnerName = partner?.first_name || 'Partner'
+  const isPartnerSelected = selectedUserId === partner?.id
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -258,6 +281,39 @@ export function MonthlyIncomeForm({
           </p>
         )}
       </div>
+
+      {/* Person selector - only shown when partner is connected */}
+      {hasPartner && !isEditing && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">Gäller</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedUserId(undefined)}
+              className={cn(
+                "h-11 rounded-xl text-sm font-medium transition-colors",
+                !isPartnerSelected
+                  ? "bg-stacka-olive text-white"
+                  : "bg-muted text-foreground hover:bg-muted/70"
+              )}
+            >
+              {userName}
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedUserId(partner?.id)}
+              className={cn(
+                "h-11 rounded-xl text-sm font-medium transition-colors",
+                isPartnerSelected
+                  ? "bg-stacka-olive text-white"
+                  : "bg-muted text-foreground hover:bg-muted/70"
+              )}
+            >
+              {partnerName}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Submit / Cancel */}
       <div className="flex gap-2">

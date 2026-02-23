@@ -319,6 +319,7 @@
     "incomeType": "Income type",
     "selectType": "Select income type",
     "searchOrWrite": "Search or write your own...",
+    "appliesTo": "Applies to",
     "amount": "Amount",
     "period": "Period",
     "incomeSaved": "Income saved",

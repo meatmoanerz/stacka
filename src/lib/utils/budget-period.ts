@@ -157,17 +157,25 @@ export function getPeriodDates(periodStr: string, salaryDay: number): { startDat
 }
 
 /**
- * Get array of recent periods for selection
+ * Get array of recent periods for selection.
+ * Ensures exactly `count` unique periods by deduplicating
+ * (salary day near month boundaries can cause overlaps).
  */
 export function getRecentPeriods(salaryDay: number, count: number = 6): BudgetPeriod[] {
   const periods: BudgetPeriod[] = []
-  const current = getCurrentBudgetPeriod(salaryDay)
-  
-  for (let i = 0; i < count; i++) {
-    const date = subMonths(new Date(), i)
-    periods.push(getBudgetPeriod(date, salaryDay))
+  const seen = new Set<string>()
+  let offset = 0
+
+  while (periods.length < count && offset < count + 12) {
+    const date = subMonths(new Date(), offset)
+    const period = getBudgetPeriod(date, salaryDay)
+    if (!seen.has(period.period)) {
+      seen.add(period.period)
+      periods.push(period)
+    }
+    offset++
   }
-  
+
   return periods
 }
 

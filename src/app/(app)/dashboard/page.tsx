@@ -72,7 +72,9 @@ export default function DashboardPage() {
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
   
-  const { data: expenses = [], isLoading: expensesLoading } = useExpensesByPeriod(salaryDay)
+  const { data: allExpenses = [], isLoading: expensesLoading } = useExpensesByPeriod(salaryDay)
+  // Exclude CCM expenses to avoid double counting (they count when the invoice arrives)
+  const expenses = allExpenses.filter(exp => !exp.is_ccm)
   const { data: householdIncome } = useHouseholdIncome()
   const { data: monthlyIncomeTotal } = useMonthlyIncomeTotal(currentPeriod.period)
   const { data: budget } = useBudgetByPeriod(currentPeriod.period)
