@@ -12,7 +12,7 @@ import {
   useDeleteMonthlyIncome,
   useCopyPreviousPeriodIncomes,
 } from '@/hooks/use-monthly-incomes'
-import { useUser } from '@/hooks/use-user'
+import { useUser, usePartner } from '@/hooks/use-user'
 import { formatCurrency } from '@/lib/utils/formatters'
 import { getCurrentBudgetPeriod, getNextPeriods, formatPeriodDisplay } from '@/lib/utils/budget-period'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -24,6 +24,7 @@ import type { HouseholdMonthlyIncome } from '@/types'
 export default function MonthlyIncomePage() {
   const searchParams = useSearchParams()
   const { data: user } = useUser()
+  const { data: partner } = usePartner()
   const salaryDay = user?.salary_day || 25
 
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
@@ -43,10 +44,12 @@ export default function MonthlyIncomePage() {
   const partnerIncomes = useMemo(() => incomes.filter(i => !i.is_own), [incomes])
 
   const handleDelete = async (income: HouseholdMonthlyIncome) => {
-    if (!income.is_own) return
-
     try {
-      await deleteIncome.mutateAsync({ id: income.id, period: selectedPeriod })
+      await deleteIncome.mutateAsync({
+        id: income.id,
+        period: selectedPeriod,
+        forPartner: !income.is_own,
+      })
       toast.success(`"${income.name}" borttagen`)
     } catch {
       toast.error('Kunde inte ta bort inkomsten')
@@ -69,6 +72,9 @@ export default function MonthlyIncomePage() {
   const handleEditComplete = () => {
     setEditingIncome(null)
   }
+
+  const userName = user?.first_name || 'Du'
+  const partnerName = partner?.first_name || 'Partner'
 
   return (
     <div className="p-4 space-y-4">
@@ -154,6 +160,9 @@ export default function MonthlyIncomePage() {
               period={selectedPeriod}
               editingIncome={editingIncome}
               onEditComplete={handleEditComplete}
+              hasPartner={!!partner}
+              userName={userName}
+              partnerName={partnerName}
             />
           </CardContent>
         </Card>
@@ -201,7 +210,9 @@ export default function MonthlyIncomePage() {
                   key={income.id}
                   income={income}
                   isLast={index === partnerIncomes.length - 1}
-                  readonly
+                  onEdit={() => setEditingIncome(income)}
+                  onDelete={() => handleDelete(income)}
+                  isDeleting={deleteIncome.isPending}
                 />
               ))}
             </CardContent>

@@ -146,7 +146,7 @@ export function useHasIncomeForCurrentPeriod() {
   })
 }
 
-// Create monthly income
+// Create monthly income (own or partner's)
 export function useCreateMonthlyIncome() {
   const supabase = createClient()
   const queryClient = useQueryClient()
@@ -156,7 +156,24 @@ export function useCreateMonthlyIncome() {
       period: string
       name: string
       amount: number
+      forPartner?: boolean
     }) => {
+      if (income.forPartner) {
+        // Use API route to bypass RLS for partner
+        const response = await fetch('/api/partner-monthly-incomes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            period: income.period,
+            name: income.name,
+            amount: income.amount,
+          }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Failed to create partner income')
+        return result.income as MonthlyIncome
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
@@ -183,17 +200,29 @@ export function useCreateMonthlyIncome() {
   })
 }
 
-// Update monthly income
+// Update monthly income (own or partner's)
 export function useUpdateMonthlyIncome() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: {
+    mutationFn: async ({ id, forPartner, ...updates }: {
       id: string
       name?: string
       amount?: number
+      forPartner?: boolean
     }) => {
+      if (forPartner) {
+        const response = await fetch('/api/partner-monthly-incomes', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...updates }),
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Failed to update partner income')
+        return result.income as MonthlyIncome
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.from('monthly_incomes') as any)
         .update(updates)
@@ -212,13 +241,22 @@ export function useUpdateMonthlyIncome() {
   })
 }
 
-// Delete monthly income
+// Delete monthly income (own or partner's)
 export function useDeleteMonthlyIncome() {
   const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, period }: { id: string; period: string }) => {
+    mutationFn: async ({ id, period, forPartner }: { id: string; period: string; forPartner?: boolean }) => {
+      if (forPartner) {
+        const response = await fetch(`/api/partner-monthly-incomes?id=${id}`, {
+          method: 'DELETE',
+        })
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.error || 'Failed to delete partner income')
+        return { id, period }
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('monthly_incomes') as any)
         .delete()

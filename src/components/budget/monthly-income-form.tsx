@@ -27,21 +27,30 @@ interface MonthlyIncomeFormProps {
   period: string
   editingIncome?: HouseholdMonthlyIncome | null
   onEditComplete?: () => void
+  hasPartner?: boolean
+  userName?: string
+  partnerName?: string
 }
 
 export function MonthlyIncomeForm({
   period,
   editingIncome,
   onEditComplete,
+  hasPartner = false,
+  userName = 'Du',
+  partnerName = 'Partner',
 }: MonthlyIncomeFormProps) {
   const createIncome = useCreateMonthlyIncome()
   const updateIncome = useUpdateMonthlyIncome()
   const [amountDisplay, setAmountDisplay] = useState('')
   const [typeSearch, setTypeSearch] = useState('')
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const [forPartner, setForPartner] = useState(false)
+  const [personDropdownOpen, setPersonDropdownOpen] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
   const typeInputRef = useRef<HTMLInputElement>(null)
   const typeDropdownRef = useRef<HTMLDivElement>(null)
+  const personDropdownRef = useRef<HTMLDivElement>(null)
 
   const isEditing = !!editingIncome
 
@@ -60,6 +69,7 @@ export function MonthlyIncomeForm({
       form.setValue('amount', editingIncome.amount)
       setAmountDisplay(editingIncome.amount.toString())
       setTypeSearch('')
+      setForPartner(!editingIncome.is_own)
     }
   }, [editingIncome, form])
 
@@ -82,6 +92,9 @@ export function MonthlyIncomeForm({
     function handleClickOutside(event: MouseEvent) {
       if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
         setTypeDropdownOpen(false)
+      }
+      if (personDropdownRef.current && !personDropdownRef.current.contains(event.target as Node)) {
+        setPersonDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -123,6 +136,7 @@ export function MonthlyIncomeForm({
           id: editingIncome.id,
           name: data.name,
           amount: data.amount,
+          forPartner: !editingIncome.is_own,
         })
         toast.success('Inkomst uppdaterad')
         onEditComplete?.()
@@ -131,6 +145,7 @@ export function MonthlyIncomeForm({
           period,
           name: data.name,
           amount: data.amount,
+          forPartner,
         })
         toast.success('Inkomst sparad')
       }
@@ -138,6 +153,7 @@ export function MonthlyIncomeForm({
       // Reset form
       setAmountDisplay('')
       setTypeSearch('')
+      setForPartner(false)
       form.reset({
         name: '',
         amount: 0,
@@ -150,6 +166,7 @@ export function MonthlyIncomeForm({
   const handleCancel = () => {
     setAmountDisplay('')
     setTypeSearch('')
+    setForPartner(false)
     form.reset({
       name: '',
       amount: 0,
@@ -258,6 +275,50 @@ export function MonthlyIncomeForm({
           </p>
         )}
       </div>
+
+      {/* Person selector - only show when partner is connected */}
+      {hasPartner && !isEditing && (
+        <div className="space-y-2" ref={personDropdownRef}>
+          <Label className="text-muted-foreground text-sm">Gäller</Label>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPersonDropdownOpen(!personDropdownOpen)}
+              className={cn(inputStyles, "flex items-center justify-between cursor-pointer")}
+            >
+              <span>{forPartner ? partnerName : userName}</span>
+              <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", personDropdownOpen && "rotate-180")} />
+            </button>
+
+            {personDropdownOpen && (
+              <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForPartner(false)
+                    setPersonDropdownOpen(false)
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
+                >
+                  <span>{userName}</span>
+                  {!forPartner && <Check className="w-4 h-4 text-stacka-olive" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForPartner(true)
+                    setPersonDropdownOpen(false)
+                  }}
+                  className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
+                >
+                  <span>{partnerName}</span>
+                  {forPartner && <Check className="w-4 h-4 text-stacka-olive" />}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Submit / Cancel */}
       <div className="flex gap-2">
