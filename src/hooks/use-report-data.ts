@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { getRecentPeriods, getPeriodDates } from '@/lib/utils/budget-period'
 import { format } from 'date-fns'
-import type { ExpenseWithCategory, BudgetPeriod } from '@/types'
+import type { ExpenseWithCategory } from '@/types'
 
 export interface PeriodSummary {
   period: string
@@ -55,7 +55,7 @@ export function useReportHistory(salaryDay: number) {
       const { data: incomes, error: incError } = rpcResult
 
       // Fallback: fetch individual incomes if batch RPC doesn't exist
-      let incomeMap: Record<string, number> = {}
+      const incomeMap: Record<string, number> = {}
       if (incomes && !incError) {
         for (const row of incomes as { period: string; total_income: number }[]) {
           incomeMap[row.period] = row.total_income
@@ -74,13 +74,13 @@ export function useReportHistory(salaryDay: number) {
         }
       }
 
-      // Bucket expenses into periods
+      // Bucket expenses into periods, excluding CCM expenses to avoid double counting
       const allExpenses = (expenses || []) as ExpenseWithCategory[]
       const summaries: PeriodSummary[] = periods.map(p => {
         const { startDate, endDate } = getPeriodDates(p.period, salaryDay)
         const periodExpenses = allExpenses.filter(exp => {
           const d = new Date(exp.date)
-          return d >= startDate && d <= endDate
+          return d >= startDate && d <= endDate && !exp.is_ccm
         })
         const totalExpenses = periodExpenses.reduce((sum, exp) => sum + exp.amount, 0)
 
@@ -92,13 +92,8 @@ export function useReportHistory(salaryDay: number) {
         }
       })
 
-      const reversed = summaries.reverse() // oldest first for chart
-
-      // Trim leading empty periods (no data yet)
-      const firstNonEmpty = reversed.findIndex(
-        s => s.totalExpenses > 0 || s.totalIncome > 0
-      )
-      return firstNonEmpty > 0 ? reversed.slice(firstNonEmpty) : reversed
+      // Always show all 12 periods (oldest first for chart)
+      return summaries.reverse()
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!salaryDay,

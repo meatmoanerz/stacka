@@ -27,18 +27,25 @@ interface MonthlyIncomeFormProps {
   period: string
   editingIncome?: HouseholdMonthlyIncome | null
   onEditComplete?: () => void
+  hasPartner?: boolean
+  userName?: string
+  partnerName?: string
 }
 
 export function MonthlyIncomeForm({
   period,
   editingIncome,
   onEditComplete,
+  hasPartner = false,
+  userName = 'Du',
+  partnerName = 'Partner',
 }: MonthlyIncomeFormProps) {
   const createIncome = useCreateMonthlyIncome()
   const updateIncome = useUpdateMonthlyIncome()
   const [amountDisplay, setAmountDisplay] = useState('')
   const [typeSearch, setTypeSearch] = useState('')
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const [forPartner, setForPartner] = useState(false)
   const amountInputRef = useRef<HTMLInputElement>(null)
   const typeInputRef = useRef<HTMLInputElement>(null)
   const typeDropdownRef = useRef<HTMLDivElement>(null)
@@ -60,6 +67,7 @@ export function MonthlyIncomeForm({
       form.setValue('amount', editingIncome.amount)
       setAmountDisplay(editingIncome.amount.toString())
       setTypeSearch('')
+      setForPartner(!editingIncome.is_own)
     }
   }, [editingIncome, form])
 
@@ -121,6 +129,7 @@ export function MonthlyIncomeForm({
       if (isEditing && editingIncome) {
         await updateIncome.mutateAsync({
           id: editingIncome.id,
+          period,
           name: data.name,
           amount: data.amount,
         })
@@ -131,6 +140,7 @@ export function MonthlyIncomeForm({
           period,
           name: data.name,
           amount: data.amount,
+          for_partner: forPartner,
         })
         toast.success('Inkomst sparad')
       }
@@ -138,6 +148,7 @@ export function MonthlyIncomeForm({
       // Reset form
       setAmountDisplay('')
       setTypeSearch('')
+      setForPartner(false)
       form.reset({
         name: '',
         amount: 0,
@@ -150,6 +161,7 @@ export function MonthlyIncomeForm({
   const handleCancel = () => {
     setAmountDisplay('')
     setTypeSearch('')
+    setForPartner(false)
     form.reset({
       name: '',
       amount: 0,
@@ -258,6 +270,39 @@ export function MonthlyIncomeForm({
           </p>
         )}
       </div>
+
+      {/* Person selector - only shown when partner is connected and not editing */}
+      {hasPartner && !isEditing && (
+        <div className="space-y-2">
+          <Label className="text-muted-foreground text-sm">Gäller</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setForPartner(false)}
+              className={cn(
+                "h-11 rounded-xl text-sm font-medium transition-colors",
+                !forPartner
+                  ? "bg-stacka-olive text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {userName}
+            </button>
+            <button
+              type="button"
+              onClick={() => setForPartner(true)}
+              className={cn(
+                "h-11 rounded-xl text-sm font-medium transition-colors",
+                forPartner
+                  ? "bg-stacka-olive text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {partnerName}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Submit / Cancel */}
       <div className="flex gap-2">

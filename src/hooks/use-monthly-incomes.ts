@@ -146,9 +146,8 @@ export function useHasIncomeForCurrentPeriod() {
   })
 }
 
-// Create monthly income
+// Create monthly income (supports partner incomes via API)
 export function useCreateMonthlyIncome() {
-  const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -156,23 +155,26 @@ export function useCreateMonthlyIncome() {
       period: string
       name: string
       amount: number
+      for_partner?: boolean
     }) => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not authenticated')
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('monthly_incomes') as any)
-        .insert({
-          user_id: user.id,
+      const response = await fetch('/api/monthly-incomes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           period: income.period,
           name: income.name,
           amount: income.amount,
-        })
-        .select()
-        .single()
+          for_partner: income.for_partner || false,
+        }),
+      })
 
-      if (error) throw error
-      return data as MonthlyIncome
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to create income')
+      }
+
+      const { income: created } = await response.json()
+      return created as MonthlyIncome
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['monthly-incomes', variables.period] })
@@ -183,26 +185,30 @@ export function useCreateMonthlyIncome() {
   })
 }
 
-// Update monthly income
+// Update monthly income (supports partner incomes via API)
 export function useUpdateMonthlyIncome() {
-  const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: {
+    mutationFn: async ({ id, period, ...updates }: {
       id: string
+      period: string
       name?: string
       amount?: number
     }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from('monthly_incomes') as any)
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      const response = await fetch('/api/monthly-incomes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...updates }),
+      })
 
-      if (error) throw error
-      return data as MonthlyIncome
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to update income')
+      }
+
+      const { income } = await response.json()
+      return { ...income, period } as MonthlyIncome
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['monthly-incomes', data.period] })
@@ -212,19 +218,21 @@ export function useUpdateMonthlyIncome() {
   })
 }
 
-// Delete monthly income
+// Delete monthly income (supports partner incomes via API)
 export function useDeleteMonthlyIncome() {
-  const supabase = createClient()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ id, period }: { id: string; period: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from('monthly_incomes') as any)
-        .delete()
-        .eq('id', id)
+      const response = await fetch(`/api/monthly-incomes?id=${id}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to delete income')
+      }
+
       return { id, period }
     },
     onSuccess: (data) => {

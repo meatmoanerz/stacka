@@ -1,4 +1,4 @@
-import { format, addMonths, subMonths, setDate, isAfter, isBefore, startOfDay, getDay } from 'date-fns'
+import { format, addMonths, subMonths, isAfter, isBefore, startOfDay, getDay } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import type { BudgetPeriod } from '@/types'
 
@@ -157,17 +157,24 @@ export function getPeriodDates(periodStr: string, salaryDay: number): { startDat
 }
 
 /**
- * Get array of recent periods for selection
+ * Get array of recent periods for selection (deduplicated, guaranteed unique)
  */
 export function getRecentPeriods(salaryDay: number, count: number = 6): BudgetPeriod[] {
   const periods: BudgetPeriod[] = []
-  const current = getCurrentBudgetPeriod(salaryDay)
-  
-  for (let i = 0; i < count; i++) {
+  const seen = new Set<string>()
+  let i = 0
+
+  while (periods.length < count) {
     const date = subMonths(new Date(), i)
-    periods.push(getBudgetPeriod(date, salaryDay))
+    const period = getBudgetPeriod(date, salaryDay)
+    if (!seen.has(period.period)) {
+      seen.add(period.period)
+      periods.push(period)
+    }
+    i++
+    if (i > count + 12) break // Safety limit
   }
-  
+
   return periods
 }
 

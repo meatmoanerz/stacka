@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useBudgetByPeriod } from '@/hooks/use-budgets'
@@ -38,8 +38,11 @@ export default function ReportPage() {
   const { data: incomeTotal } = useMonthlyIncomeTotal(selectedPeriod)
   const { data: historySummaries = [] } = useReportHistory(salaryDay)
 
+  // Filter out CCM expenses to avoid double counting (they come in via CC invoice next period)
+  const cashflowExpenses = useMemo(() => expenses.filter(exp => !exp.is_ccm), [expenses])
+
   const totalIncome = incomeTotal?.total_income ?? 0
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+  const totalSpent = cashflowExpenses.reduce((sum, exp) => sum + exp.amount, 0)
   const periodProgress = isCurrentPeriod ? getPeriodProgress(salaryDay) : 100
 
   if (userLoading || expLoading) {
@@ -83,18 +86,18 @@ export default function ReportPage() {
 
       {/* Top spending categories */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <ReportCategoryRanking expenses={expenses} />
+        <ReportCategoryRanking expenses={cashflowExpenses} />
       </motion.div>
 
       {/* Budget vs Actual */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <ReportBudgetVariance expenses={expenses} budget={budget ?? null} />
+        <ReportBudgetVariance expenses={cashflowExpenses} budget={budget ?? null} />
       </motion.div>
 
       {/* Household costs */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <ReportHouseholdCosts
-          expenses={expenses}
+          expenses={cashflowExpenses}
           hasPartner={!!partner}
           userName={user?.first_name || 'Du'}
           partnerName={partner?.first_name || 'Partner'}
@@ -105,7 +108,7 @@ export default function ReportPage() {
       {!!partner && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <ReportPartnerSpending
-            expenses={expenses}
+            expenses={cashflowExpenses}
             userName={user?.first_name || 'Du'}
             partnerName={partner?.first_name || 'Partner'}
             userIncome={incomeTotal?.user_income ?? 0}
@@ -116,13 +119,13 @@ export default function ReportPage() {
 
       {/* Savings progress */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <ReportSavingsProgress expenses={expenses} selectedPeriod={selectedPeriod} />
+        <ReportSavingsProgress expenses={cashflowExpenses} selectedPeriod={selectedPeriod} />
       </motion.div>
 
       {/* KPI Insights */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <ReportKpiInsights
-          expenses={expenses}
+          expenses={cashflowExpenses}
           budget={budget ?? null}
           totalIncome={totalIncome}
           totalSpent={totalSpent}
