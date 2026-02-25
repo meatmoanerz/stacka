@@ -19,6 +19,8 @@ export type CustomGoalType = Tables<'custom_goal_types'>
 export type PartnerConnection = Tables<'partner_connections'>
 export type StatementAnalysis = Tables<'statement_analyses'>
 export type StatementTransaction = Tables<'statement_transactions'>
+export type TemporaryBudget = Tables<'temporary_budgets'>
+export type TemporaryBudgetCategory = Tables<'temporary_budget_categories'>
 
 // Enum types
 export type CostType = Enums<'cost_type'>
@@ -29,6 +31,7 @@ export type GoalCategory = Enums<'goal_category'>
 export type GoalStatus = Enums<'goal_status'>
 export type ConnectionStatus = Enums<'connection_status'>
 export type AnalysisStatus = Enums<'analysis_status'>
+export type TemporaryBudgetStatus = Enums<'temporary_budget_status'>
 
 // Extended types with relations
 export interface ExpenseWithCategory extends Expense {
@@ -54,6 +57,14 @@ export interface SavingsGoalContributionWithExpense extends SavingsGoalContribut
 
 export interface LoanWithGroup extends Loan {
   loan_group: LoanGroup | null
+}
+
+export interface TemporaryBudgetWithCategories extends TemporaryBudget {
+  temporary_budget_categories: TemporaryBudgetCategory[]
+}
+
+export interface TemporaryBudgetWithDetails extends TemporaryBudgetWithCategories {
+  expenses: ExpenseWithCategory[]
 }
 
 // Budget period type

@@ -215,6 +215,10 @@ export function useCreateExpense() {
         group_purchase_partner_share: newExpense.group_purchase_partner_share || null,
         group_purchase_swish_amount: newExpense.group_purchase_swish_amount || null,
         group_purchase_swish_recipient: newExpense.group_purchase_swish_recipient || null,
+        temporary_budget_id: newExpense.temporary_budget_id || null,
+        temporary_budget_category_id: newExpense.temporary_budget_category_id || null,
+        original_currency: newExpense.original_currency || null,
+        original_amount: newExpense.original_amount || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         category: category || {

@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import { useBudgets } from '@/hooks/use-budgets'
+import { useTemporaryBudgets } from '@/hooks/use-temporary-budgets'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { Card, CardContent } from '@/components/ui/card'
@@ -10,28 +11,35 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { BudgetListSkeleton } from '@/components/budget/budget-list-skeleton'
 import { IncomeOverviewCard } from '@/components/budget/income-overview-card'
-import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
+import { formatCurrency, formatPercentage, formatDate } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod } from '@/lib/utils/budget-period'
+import { getCurrency, formatCurrencyAmount, convertFromSEK } from '@/lib/utils/currencies'
 import { motion } from 'framer-motion'
-import { Plus, ChevronRight, Wallet, Users } from 'lucide-react'
+import { Plus, ChevronRight, Wallet, Users, FolderOpen, Archive, Calendar, Target } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
-import type { Budget } from '@/types'
+import type { Budget, TemporaryBudgetWithCategories } from '@/types'
 
 export default function BudgetListPage() {
   const { data: user } = useUser()
   const { data: partner } = usePartner()
-  const { data: budgets, isLoading } = useBudgets()
+  const { data: budgets, isLoading: budgetsLoading } = useBudgets()
+  const { data: tempBudgets, isLoading: tempLoading } = useTemporaryBudgets()
 
   const salaryDay = user?.salary_day || 25
   const currentPeriod = getCurrentBudgetPeriod(salaryDay)
   const hasPartner = !!partner
 
-  if (isLoading) {
+  // Filter out archived monthly budgets
+  const activeBudgets = useMemo(() => {
+    return budgets?.filter(b => !b.is_archived) || []
+  }, [budgets])
+
+  if (budgetsLoading) {
     return <BudgetListSkeleton />
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 pb-24">
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -39,7 +47,7 @@ export default function BudgetListPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-stacka-olive">Budgetar</h1>
-          <p className="text-sm text-muted-foreground">Hantera dina månadsbudgetar</p>
+          <p className="text-sm text-muted-foreground">Hantera dina budgetar</p>
         </div>
         <Button asChild>
           <Link href="/budget/new">
@@ -68,16 +76,16 @@ export default function BudgetListPage() {
                 <Wallet className="w-6 h-6" />
               </div>
             </div>
-            {budgets?.find(b => b.period === currentPeriod.period) ? (
-              <Link 
-                href={`/budget/${budgets.find(b => b.period === currentPeriod.period)?.id}`}
+            {activeBudgets.find(b => b.period === currentPeriod.period) ? (
+              <Link
+                href={`/budget/${activeBudgets.find(b => b.period === currentPeriod.period)?.id}`}
                 className="inline-flex items-center text-sm text-white/90 hover:text-white"
               >
                 Visa budget
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Link>
             ) : (
-              <Link 
+              <Link
                 href={`/budget/new?period=${currentPeriod.period}`}
                 className="inline-flex items-center text-sm text-white/90 hover:text-white"
               >
@@ -92,8 +100,8 @@ export default function BudgetListPage() {
       {/* Monthly Income Card */}
       <IncomeOverviewCard period={currentPeriod.period} />
 
-      {/* Budget List */}
-      {(!budgets || budgets.length === 0) ? (
+      {/* Monthly Budget List */}
+      {activeBudgets.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +124,7 @@ export default function BudgetListPage() {
         </motion.div>
       ) : (
         <div className="space-y-3">
-          {budgets.map((budget, index) => (
+          {activeBudgets.map((budget, index) => (
             <BudgetCard
               key={budget.id}
               budget={budget}
@@ -128,28 +136,82 @@ export default function BudgetListPage() {
           ))}
         </div>
       )}
+
+      {/* Project Budgets Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-3"
+      >
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-stacka-olive" />
+            <h2 className="text-lg font-semibold text-stacka-olive">Projektbudgetar</h2>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/budget/project/new">
+              <Plus className="w-3.5 h-3.5 mr-1.5" />
+              Ny
+            </Link>
+          </Button>
+        </div>
+
+        {!tempBudgets || tempBudgets.length === 0 ? (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="py-8 text-center">
+              <div className="w-12 h-12 rounded-full bg-stacka-mint/30 flex items-center justify-center mx-auto mb-3">
+                <Target className="w-6 h-6 text-stacka-olive" />
+              </div>
+              <h3 className="font-semibold text-sm mb-1">Inga projektbudgetar</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Skapa en budget för resor, renoveringar eller andra projekt
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/budget/project/new">Skapa projektbudget</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {tempBudgets.map((tb, index) => (
+              <TemporaryBudgetCard key={tb.id} budget={tb} index={index} />
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Archive Link */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="pt-2"
+      >
+        <Link
+          href="/budget/archive"
+          className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-stacka-olive transition-colors py-3"
+        >
+          <Archive className="w-4 h-4" />
+          Visa arkiv
+        </Link>
+      </motion.div>
     </div>
   )
 }
 
 function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budget: Budget; index: number; isCurrent: boolean; salaryDay: number; hasPartner: boolean }) {
-  // Fetch actual expenses for this period
   const { data: expenses } = useExpensesByPeriod(budget.period, salaryDay)
 
-  // Calculate actual spending from expenses (excluding savings category)
-  // When partner is connected: show total spend (all expenses at full amount)
-  // When no partner: show user's portion (personal: 100%, shared: 50%, partner: 0%)
   const actualSpent = useMemo(() => {
     if (!expenses) return 0
 
     if (hasPartner) {
-      // Total household spend - count all expenses at full amount (including savings)
       return expenses.reduce((sum, expense) => {
         return sum + expense.amount
       }, 0)
     }
 
-    // User's portion only (no partner), including savings
     return expenses.reduce((sum, expense) => {
       const assignment = expense.cost_assignment || 'personal'
 
@@ -158,21 +220,16 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
       } else if (assignment === 'shared') {
         return sum + expense.amount / 2
       }
-      // partner = 0 (not counted)
       return sum
     }, 0)
   }, [expenses, hasPartner])
 
-  // Calculate total budgeted amount (fixed + variable + savings)
-  // All money going out should be counted - both expenses and savings
   const budgetedExpenses = (budget.total_expenses || 0) + (budget.total_savings || 0)
 
   const spentRatio = budgetedExpenses > 0
     ? (actualSpent / budgetedExpenses) * 100
     : 0
 
-  // Calculate remaining (budget-based: budgeted expenses - actual spent)
-  // This is consistent with Dashboard calculation
   const remaining = budgetedExpenses - actualSpent
 
   return (
@@ -225,3 +282,81 @@ function BudgetCard({ budget, index, isCurrent, salaryDay, hasPartner }: { budge
   )
 }
 
+function TemporaryBudgetCard({ budget, index }: { budget: TemporaryBudgetWithCategories; index: number }) {
+  const isNonSEK = budget.currency !== 'SEK'
+  const currencyInfo = getCurrency(budget.currency)
+
+  const spentRatio = budget.total_budget > 0
+    ? (budget.total_spent / budget.total_budget) * 100
+    : 0
+
+  const isOverBudget = budget.total_spent > budget.total_budget
+
+  // Calculate days remaining
+  const endDate = new Date(budget.end_date)
+  const now = new Date()
+  const daysRemaining = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+  const isExpired = daysRemaining === 0
+  const isCompleted = budget.status === 'completed'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 + index * 0.05 }}
+    >
+      <Link href={`/budget/project/${budget.id}`}>
+        <Card className={cn(
+          "border-0 shadow-sm transition-all hover:shadow-md border-l-4 border-l-stacka-mint",
+          isCompleted && "opacity-75"
+        )}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold truncate">{budget.name}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    {formatDate(budget.start_date)} — {formatDate(budget.end_date)}
+                  </span>
+                  {isNonSEK && currencyInfo && (
+                    <span className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-medium">
+                      {currencyInfo.code}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Förbrukat</span>
+                <span className={cn("font-medium", isOverBudget && "text-destructive")}>
+                  {isNonSEK
+                    ? `${formatCurrencyAmount(convertFromSEK(budget.total_spent, budget.exchange_rate), budget.currency)} / ${formatCurrencyAmount(convertFromSEK(budget.total_budget, budget.exchange_rate), budget.currency)}`
+                    : `${formatCurrency(budget.total_spent)} / ${formatCurrency(budget.total_budget)}`}
+                </span>
+              </div>
+              <Progress
+                value={Math.min(spentRatio, 100)}
+                className={cn("h-2", isOverBudget && "[&>div]:bg-destructive")}
+              />
+            </div>
+
+            <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
+              <span>
+                {isCompleted
+                  ? 'Klar'
+                  : isExpired
+                    ? 'Avslutad'
+                    : `${daysRemaining} dagar kvar`}
+              </span>
+              <span>{budget.temporary_budget_categories.length} kategorier</span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    </motion.div>
+  )
+}
