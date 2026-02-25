@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import type {
+  Budget,
   TemporaryBudget,
   TemporaryBudgetCategory,
   TemporaryBudgetWithCategories,
@@ -75,8 +76,9 @@ export function useTemporaryBudget(id: string) {
 
       if (expensesError) throw expensesError
 
+      const budgetData = budget as TemporaryBudgetWithCategories
       return {
-        ...budget,
+        ...budgetData,
         expenses: expenses as ExpenseWithCategory[],
       } as TemporaryBudgetWithDetails
     },
@@ -108,14 +110,14 @@ export function useArchivedMonthlyBudgets() {
   return useQuery({
     queryKey: ['budgets', 'archived'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('budgets')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.from('budgets') as any)
         .select('*')
         .eq('is_archived', true)
         .order('period', { ascending: false })
 
       if (error) throw error
-      return data
+      return data as Budget[]
     },
   })
 }
@@ -415,14 +417,14 @@ export function useUpdateTemporaryBudgetSpent() {
   return useMutation({
     mutationFn: async (budgetId: string) => {
       // Calculate total spent from expenses
-      const { data: expenses, error: expError } = await supabase
-        .from('expenses')
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: expenses, error: expError } = await (supabase.from('expenses') as any)
         .select('amount')
         .eq('temporary_budget_id', budgetId)
 
       if (expError) throw expError
 
-      const totalSpent = (expenses || []).reduce((sum, e) => sum + e.amount, 0)
+      const totalSpent = ((expenses || []) as { amount: number }[]).reduce((sum, e) => sum + e.amount, 0)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase.from('temporary_budgets') as any)

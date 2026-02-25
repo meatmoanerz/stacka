@@ -16,9 +16,10 @@ import {
 } from '@/components/ui/dialog'
 import { useUpdateExpense, useDeleteExpense } from '@/hooks/use-expenses'
 import { useCategoriesByType } from '@/hooks/use-categories'
+import { useActiveTemporaryBudgets } from '@/hooks/use-temporary-budgets'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { toast } from 'sonner'
-import { Loader2, CreditCard, ChevronDown, Check, Trash2 } from 'lucide-react'
+import { Loader2, CreditCard, ChevronDown, Check, Trash2, FolderOpen } from 'lucide-react'
 import { format } from 'date-fns'
 import { sv } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
@@ -56,6 +57,7 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
   const { data: user } = useUser()
   const { data: partner } = usePartner()
   const { fixed, variable, savings } = useCategoriesByType()
+  const { data: tempBudgets } = useActiveTemporaryBudgets()
   const updateExpense = useUpdateExpense()
   const deleteExpense = useDeleteExpense()
   const hasPartner = !!partner
@@ -63,6 +65,10 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
   const [categorySearch, setCategorySearch] = useState('')
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [projectBudgetOpen, setProjectBudgetOpen] = useState(false)
+  const [projectCategoryOpen, setProjectCategoryOpen] = useState(false)
+  const [selectedProjectBudgetId, setSelectedProjectBudgetId] = useState<string | null>(null)
+  const [selectedProjectCategoryId, setSelectedProjectCategoryId] = useState<string | null>(null)
   const categoryInputRef = useRef<HTMLInputElement>(null)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
   const dateInputRef = useRef<HTMLInputElement>(null)
@@ -99,6 +105,8 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
       setAmountDisplay(expense.amount.toString())
       setCategorySearch('')
       setCategoryOpen(false)
+      setSelectedProjectBudgetId(expense.temporary_budget_id || null)
+      setSelectedProjectCategoryId(expense.temporary_budget_category_id || null)
     }
   }, [expense, open, form])
 
@@ -165,8 +173,10 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
       await updateExpense.mutateAsync({
         id: expense.id,
         ...data,
+        temporary_budget_id: selectedProjectBudgetId,
+        temporary_budget_category_id: selectedProjectCategoryId,
       })
-      toast.success('Utgift uppdaterad! ✓')
+      toast.success('Utgift uppdaterad!')
       onOpenChange(false)
     } catch {
       toast.error('Kunde inte uppdatera utgift')
@@ -435,6 +445,107 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
                   checked={form.watch('is_ccm')}
                   onCheckedChange={(checked) => form.setValue('is_ccm', checked)}
                 />
+              </div>
+            )}
+
+            {/* Project Budget Assignment */}
+            {tempBudgets && tempBudgets.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm flex items-center gap-1.5">
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Projektbudget
+                </Label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setProjectBudgetOpen(!projectBudgetOpen)}
+                    className={cn(inputStyles, "flex items-center justify-between cursor-pointer text-left")}
+                  >
+                    <span className={cn(!selectedProjectBudgetId && "text-muted-foreground/50")}>
+                      {selectedProjectBudgetId
+                        ? tempBudgets.find(b => b.id === selectedProjectBudgetId)?.name || 'Välj projekt'
+                        : 'Ingen (valfritt)'}
+                    </span>
+                    <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", projectBudgetOpen && "rotate-180")} />
+                  </button>
+                  {projectBudgetOpen && (
+                    <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-48 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProjectBudgetId(null)
+                          setSelectedProjectCategoryId(null)
+                          setProjectBudgetOpen(false)
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors text-sm text-muted-foreground"
+                      >
+                        <span>Ingen</span>
+                        {!selectedProjectBudgetId && <Check className="w-4 h-4 text-stacka-olive" />}
+                      </button>
+                      {tempBudgets.map((tb) => (
+                        <button
+                          key={tb.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedProjectBudgetId(tb.id)
+                            setSelectedProjectCategoryId(null)
+                            setProjectBudgetOpen(false)
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
+                        >
+                          <span className="text-sm">{tb.name}</span>
+                          {selectedProjectBudgetId === tb.id && <Check className="w-4 h-4 text-stacka-olive" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Project Category - show when a project budget is selected */}
+                {selectedProjectBudgetId && (() => {
+                  const selectedBudget = tempBudgets.find(b => b.id === selectedProjectBudgetId)
+                  const cats = selectedBudget?.temporary_budget_categories || []
+                  if (cats.length === 0) return null
+                  return (
+                    <div className="relative mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setProjectCategoryOpen(!projectCategoryOpen)}
+                        className={cn(inputStyles, "flex items-center justify-between cursor-pointer text-left")}
+                      >
+                        <span className={cn(!selectedProjectCategoryId && "text-muted-foreground/50")}>
+                          {selectedProjectCategoryId
+                            ? cats.find(c => c.id === selectedProjectCategoryId)?.name || 'Välj projektkategori'
+                            : 'Projektkategori (valfritt)'}
+                        </span>
+                        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", projectCategoryOpen && "rotate-180")} />
+                      </button>
+                      {projectCategoryOpen && (
+                        <div className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => { setSelectedProjectCategoryId(null); setProjectCategoryOpen(false) }}
+                            className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors text-sm text-muted-foreground"
+                          >
+                            <span>Ingen</span>
+                            {!selectedProjectCategoryId && <Check className="w-4 h-4 text-stacka-olive" />}
+                          </button>
+                          {cats.sort((a, b) => a.sort_order - b.sort_order).map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => { setSelectedProjectCategoryId(cat.id); setProjectCategoryOpen(false) }}
+                              className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors"
+                            >
+                              <span className="text-sm">{cat.name}</span>
+                              {selectedProjectCategoryId === cat.id && <Check className="w-4 h-4 text-stacka-olive" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
 

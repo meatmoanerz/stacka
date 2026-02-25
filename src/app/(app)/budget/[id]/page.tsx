@@ -4,6 +4,7 @@ import { use, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useBudget, useDeleteBudget } from '@/hooks/use-budgets'
+import { useArchiveMonthlyBudget } from '@/hooks/use-temporary-budgets'
 import { useExpensesByPeriod } from '@/hooks/use-expenses'
 import { useUser, usePartner } from '@/hooks/use-user'
 import { useHouseholdMonthlyIncomes, useMonthlyIncomeTotal } from '@/hooks/use-monthly-incomes'
@@ -19,6 +20,7 @@ import {
   ArrowLeft,
   Edit2,
   Trash2,
+  Archive,
   PiggyBank,
   TrendingDown,
   Wallet,
@@ -60,6 +62,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
   const { data: partner } = usePartner()
   const { data: budget, isLoading } = useBudget(id)
   const deleteBudget = useDeleteBudget()
+  const archiveBudget = useArchiveMonthlyBudget()
   const [viewMode, setViewMode] = useState<BudgetViewMode>('total')
   const [selectedCategory, setSelectedCategory] = useState<BudgetItem | null>(null)
   const [selectedExpense, setSelectedExpense] = useState<ExpenseWithCategory | null>(null)
@@ -238,6 +241,16 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     setExpenseEditOpen(true)
   }
 
+  async function handleArchive() {
+    try {
+      await archiveBudget.mutateAsync(id)
+      toast.success('Budget arkiverad')
+      router.push('/budget')
+    } catch {
+      toast.error('Kunde inte arkivera budgeten')
+    }
+  }
+
   async function handleDelete() {
     try {
       await deleteBudget.mutateAsync(id)
@@ -298,6 +311,15 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
           <Link href={`/budget/${id}/edit`}>
             <Edit2 className="w-4 h-4" />
           </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleArchive}
+          disabled={archiveBudget.isPending}
+          title="Arkivera"
+        >
+          <Archive className="w-4 h-4" />
         </Button>
         <AlertDialog>
           <AlertDialogTrigger asChild>

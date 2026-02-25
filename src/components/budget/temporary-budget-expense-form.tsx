@@ -136,6 +136,7 @@ export function TemporaryBudgetExpenseForm({
 
     try {
       await createExpense.mutateAsync({
+        user_id: user?.id || '',
         amount: amountSEK,
         description: description.trim(),
         category_id: selectedRegularCategoryId,

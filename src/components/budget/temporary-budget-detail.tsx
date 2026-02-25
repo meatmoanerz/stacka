@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useTemporaryBudget } from '@/hooks/use-temporary-budgets'
-import { useUser, usePartner } from '@/hooks/use-user'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -42,8 +41,6 @@ interface TemporaryBudgetDetailProps {
 export function TemporaryBudgetDetail({ id }: TemporaryBudgetDetailProps) {
   const router = useRouter()
   const { data: budget, isLoading } = useTemporaryBudget(id)
-  const { data: user } = useUser()
-  const { data: partner } = usePartner()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [addExpenseOpen, setAddExpenseOpen] = useState(false)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
