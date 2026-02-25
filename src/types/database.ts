@@ -233,6 +233,7 @@ export type Database = {
           total_savings: number
           net_balance: number
           savings_ratio: number
+          is_archived: boolean
           created_at: string
           updated_at: string
         }
@@ -249,6 +250,7 @@ export type Database = {
           total_savings?: number
           net_balance?: number
           savings_ratio?: number
+          is_archived?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -265,6 +267,7 @@ export type Database = {
           total_savings?: number
           net_balance?: number
           savings_ratio?: number
+          is_archived?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -340,6 +343,10 @@ export type Database = {
           group_purchase_partner_share: number | null
           group_purchase_swish_amount: number | null
           group_purchase_swish_recipient: 'user' | 'partner' | 'shared' | null
+          temporary_budget_id: string | null
+          temporary_budget_category_id: string | null
+          original_currency: string | null
+          original_amount: number | null
           created_at: string
           updated_at: string
         }
@@ -361,6 +368,10 @@ export type Database = {
           group_purchase_partner_share?: number | null
           group_purchase_swish_amount?: number | null
           group_purchase_swish_recipient?: 'user' | 'partner' | 'shared' | null
+          temporary_budget_id?: string | null
+          temporary_budget_category_id?: string | null
+          original_currency?: string | null
+          original_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -382,6 +393,10 @@ export type Database = {
           group_purchase_partner_share?: number | null
           group_purchase_swish_amount?: number | null
           group_purchase_swish_recipient?: 'user' | 'partner' | 'shared' | null
+          temporary_budget_id?: string | null
+          temporary_budget_category_id?: string | null
+          original_currency?: string | null
+          original_amount?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -714,6 +729,91 @@ export type Database = {
           created_at?: string
         }
       }
+      temporary_budgets: {
+        Row: {
+          id: string
+          user_id: string
+          partner_id: string | null
+          name: string
+          description: string | null
+          total_budget: number
+          total_spent: number
+          currency: string
+          exchange_rate: number
+          start_date: string
+          end_date: string
+          linked_budget_period: string | null
+          status: 'active' | 'completed' | 'archived'
+          is_shared: boolean
+          archived_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          partner_id?: string | null
+          name: string
+          description?: string | null
+          total_budget: number
+          total_spent?: number
+          currency?: string
+          exchange_rate?: number
+          start_date: string
+          end_date: string
+          linked_budget_period?: string | null
+          status?: 'active' | 'completed' | 'archived'
+          is_shared?: boolean
+          archived_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          partner_id?: string | null
+          name?: string
+          description?: string | null
+          total_budget?: number
+          total_spent?: number
+          currency?: string
+          exchange_rate?: number
+          start_date?: string
+          end_date?: string
+          linked_budget_period?: string | null
+          status?: 'active' | 'completed' | 'archived'
+          is_shared?: boolean
+          archived_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      temporary_budget_categories: {
+        Row: {
+          id: string
+          temporary_budget_id: string
+          name: string
+          budgeted_amount: number
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          temporary_budget_id: string
+          name: string
+          budgeted_amount?: number
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          temporary_budget_id?: string
+          name?: string
+          budgeted_amount?: number
+          sort_order?: number
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -758,6 +858,7 @@ export type Database = {
       goal_status: 'active' | 'completed' | 'archived'
       connection_status: 'pending' | 'active' | 'rejected' | 'revoked'
       analysis_status: 'processing' | 'completed' | 'failed'
+      temporary_budget_status: 'active' | 'completed' | 'archived'
     }
   }
 }
