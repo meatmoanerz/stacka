@@ -91,7 +91,7 @@ export function GroupPurchaseWizard({ open, onOpenChange, editExpense }: GroupPu
     if (editExpense && open) {
       setTotalAmount((editExpense.group_purchase_total || editExpense.amount).toString())
       setDescription(editExpense.description)
-      setCategoryId(editExpense.category_id)
+      setCategoryId(editExpense.category_id || '')
       setDate(editExpense.date)
       setUserShare((editExpense.group_purchase_user_share || 0).toString())
       setPartnerShare((editExpense.group_purchase_partner_share || 0).toString())

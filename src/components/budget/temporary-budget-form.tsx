@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useUser, usePartner } from '@/hooks/use-user'
+import { useCategories } from '@/hooks/use-categories'
 import {
   useCreateTemporaryBudget,
   useUpdateTemporaryBudget,
@@ -58,6 +59,7 @@ const formSchema = z.object({
   end_date: z.string().min(1, 'Slutdatum krävs'),
   is_shared: z.boolean(),
   linked_budget_period: z.string().nullable(),
+  linked_category_id: z.string().nullable(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -78,6 +80,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
   const router = useRouter()
   const { data: user } = useUser()
   const { data: partner } = usePartner()
+  const { data: monthlyCategories } = useCategories()
   const createBudget = useCreateTemporaryBudget()
   const updateBudget = useUpdateTemporaryBudget()
   const createCategory = useCreateTemporaryBudgetCategory()
@@ -98,6 +101,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
   })
   const [newCategoryName, setNewCategoryName] = useState('')
   const [currencyOpen, setCurrencyOpen] = useState(false)
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [showNoLinkWarning, setShowNoLinkWarning] = useState(false)
 
   const form = useForm<FormData>({
@@ -112,6 +116,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
       end_date: existingBudget?.end_date || '',
       is_shared: existingBudget?.is_shared || false,
       linked_budget_period: existingBudget?.linked_budget_period || null,
+      linked_category_id: existingBudget?.linked_category_id || null,
     },
   })
 
@@ -119,6 +124,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
   const watchExchangeRate = form.watch('exchange_rate')
   const watchTotalBudget = form.watch('total_budget')
   const watchLinkedPeriod = form.watch('linked_budget_period')
+  const watchLinkedCategoryId = form.watch('linked_category_id')
   const isNonSEK = watchCurrency !== 'SEK'
 
   const totalCategorized = useMemo(() => {
@@ -206,6 +212,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
           end_date: data.end_date,
           is_shared: data.is_shared,
           linked_budget_period: data.linked_budget_period,
+          linked_category_id: data.linked_budget_period ? data.linked_category_id : null,
         })
 
         // Handle category changes
@@ -249,6 +256,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
             end_date: data.end_date,
             is_shared: data.is_shared,
             linked_budget_period: data.linked_budget_period,
+            linked_category_id: data.linked_budget_period ? data.linked_category_id : null,
           },
           categories: categories.map((cat, i) => ({
             name: cat.name,
@@ -614,7 +622,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
           </Card>
         )}
 
-        {/* Monthly Budget Link - simplified for now */}
+        {/* Monthly Budget Link */}
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -629,6 +637,7 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
                 onCheckedChange={(checked) => {
                   if (!checked) {
                     form.setValue('linked_budget_period', null)
+                    form.setValue('linked_category_id', null)
                   } else {
                     // Default to current month
                     const now = new Date()
@@ -651,6 +660,63 @@ export function TemporaryBudgetForm({ existingBudget }: TemporaryBudgetFormProps
                 }}
               />
             </div>
+
+            {/* Category dropdown when linked */}
+            {!!watchLinkedPeriod && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-sm">Budgetkategori</Label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                    className={cn(inputStyles, 'flex items-center justify-between cursor-pointer text-left')}
+                  >
+                    <span className={!watchLinkedCategoryId ? 'text-muted-foreground/50' : ''}>
+                      {watchLinkedCategoryId
+                        ? monthlyCategories?.find((c) => c.id === watchLinkedCategoryId)?.name || 'Välj kategori'
+                        : 'Välj kategori'}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 text-muted-foreground transition-transform',
+                        categoryDropdownOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {categoryDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-64 overflow-y-auto"
+                      >
+                        {monthlyCategories?.map((cat) => (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              form.setValue('linked_category_id', cat.id)
+                              setCategoryDropdownOpen(false)
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-muted/50 flex items-center justify-between transition-colors text-sm"
+                          >
+                            <span>{cat.name}</span>
+                            {watchLinkedCategoryId === cat.id && (
+                              <Check className="w-4 h-4 text-stacka-olive" />
+                            )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Projektkostnader allokeras till denna kategori i månadsbudgeten
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

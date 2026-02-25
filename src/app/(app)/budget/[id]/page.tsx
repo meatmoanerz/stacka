@@ -105,6 +105,7 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
 
     return expenses.reduce((acc, expense) => {
       const categoryId = expense.category_id
+      if (!categoryId) return acc
       const assignment = expense.cost_assignment || 'personal'
 
       let amount = 0
@@ -145,11 +146,12 @@ export default function BudgetDetailPage({ params }: { params: Promise<{ id: str
     )
 
     const unbudgeted = expenses.filter(expense =>
-      !budgetedCategoryIds.has(expense.category_id)
+      expense.category_id && !budgetedCategoryIds.has(expense.category_id)
     )
 
     return unbudgeted.reduce((acc, expense) => {
       const categoryId = expense.category_id
+      if (!categoryId || !expense.category) return acc
       if (!acc[categoryId]) {
         acc[categoryId] = {
           category: expense.category,

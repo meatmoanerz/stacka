@@ -27,6 +27,7 @@ import {
   useCompleteTemporaryBudget,
   useDeleteTemporaryBudget,
 } from '@/hooks/use-temporary-budgets'
+import { useCategories } from '@/hooks/use-categories'
 import { CURRENCIES, getCurrency } from '@/lib/utils/currencies'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -51,12 +52,15 @@ export function TemporaryBudgetSettingsDialog({
   const archiveBudget = useArchiveTemporaryBudget()
   const completeBudget = useCompleteTemporaryBudget()
   const deleteBudget = useDeleteTemporaryBudget()
+  const { data: monthlyCategories } = useCategories()
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [currencyOpen, setCurrencyOpen] = useState(false)
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
 
   const [currency, setCurrency] = useState(budget.currency)
   const [exchangeRate, setExchangeRate] = useState(budget.exchange_rate)
   const [linkedPeriod, setLinkedPeriod] = useState(budget.linked_budget_period)
+  const [linkedCategoryId, setLinkedCategoryId] = useState(budget.linked_category_id)
 
   const currencyInfo = getCurrency(currency)
   const isNonSEK = currency !== 'SEK'
@@ -75,6 +79,7 @@ export function TemporaryBudgetSettingsDialog({
         currency,
         exchange_rate: exchangeRate,
         linked_budget_period: linkedPeriod,
+        linked_category_id: linkedPeriod ? linkedCategoryId : null,
       })
       toast.success('Inställningar sparade')
       onOpenChange(false)
@@ -193,24 +198,81 @@ export function TemporaryBudgetSettingsDialog({
             )}
 
             {/* Monthly Budget Link */}
-            <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-              <div>
-                <Label className="text-sm font-medium">Koppla till månadsbudget</Label>
-                <p className="text-xs text-muted-foreground">Allokera från månadsbudget</p>
+            <div className="space-y-3 p-3 rounded-xl bg-muted/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Koppla till månadsbudget</Label>
+                  <p className="text-xs text-muted-foreground">Allokera från månadsbudget</p>
+                </div>
+                <Switch
+                  checked={!!linkedPeriod}
+                  onCheckedChange={(checked) => {
+                    if (!checked) {
+                      setLinkedPeriod(null)
+                      setLinkedCategoryId(null)
+                    } else {
+                      const now = new Date()
+                      setLinkedPeriod(
+                        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                      )
+                    }
+                  }}
+                />
               </div>
-              <Switch
-                checked={!!linkedPeriod}
-                onCheckedChange={(checked) => {
-                  if (!checked) {
-                    setLinkedPeriod(null)
-                  } else {
-                    const now = new Date()
-                    setLinkedPeriod(
-                      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-                    )
-                  }
-                }}
-              />
+
+              {/* Category dropdown when linked */}
+              {!!linkedPeriod && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground text-sm">Budgetkategori</Label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                      className={cn(inputStyles, 'flex items-center justify-between cursor-pointer text-left')}
+                    >
+                      <span className={!linkedCategoryId ? 'text-muted-foreground/50' : ''}>
+                        {linkedCategoryId
+                          ? monthlyCategories?.find((c) => c.id === linkedCategoryId)?.name || 'Välj kategori'
+                          : 'Välj kategori'}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          'w-4 h-4 text-muted-foreground transition-transform',
+                          categoryDropdownOpen && 'rotate-180'
+                        )}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {categoryDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          className="absolute z-50 w-full mt-2 bg-white dark:bg-card rounded-xl shadow-lg border border-border max-h-48 overflow-y-auto"
+                        >
+                          {monthlyCategories?.map((cat) => (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => {
+                                setLinkedCategoryId(cat.id)
+                                setCategoryDropdownOpen(false)
+                              }}
+                              className="w-full px-4 py-2.5 text-left hover:bg-muted/50 flex items-center justify-between transition-colors text-sm"
+                            >
+                              <span>{cat.name}</span>
+                              {linkedCategoryId === cat.id && (
+                                <Check className="w-4 h-4 text-stacka-olive" />
+                              )}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Actions */}

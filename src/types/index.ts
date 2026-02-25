@@ -35,7 +35,7 @@ export type TemporaryBudgetStatus = Enums<'temporary_budget_status'>
 
 // Extended types with relations
 export interface ExpenseWithCategory extends Expense {
-  category: Category
+  category: Category | null
 }
 
 export interface BudgetItemWithCategory extends BudgetItem {

@@ -446,11 +446,12 @@
   - [ ] Spara egna mallar
   - [ ] Kopiera budget från föregående månad
 
-- [ ] **Flexibla Budgetar** (Premium)
-  - [ ] Skapa flera budgetar parallellt (t.ex. månadsbudget + resebudget)
-  - [ ] Specifika budgetar för projekt (t.ex. "Portugal 2025")
+- [x] **Flexibla Budgetar** ✅ KLART (Projektbudgetar)
+  - [x] Skapa flera budgetar parallellt (t.ex. månadsbudget + resebudget)
+  - [x] Specifika budgetar för projekt (t.ex. "Portugal 2025")
+  - [x] Länka projektbudget till månadsbudgetkategori
+  - [x] Separata budgetar för olika syften
   - [ ] Konsolidera flera budgetar till huvudbudget
-  - [ ] Separata budgetar för olika syften
   - [ ] Nya användare får 2 separata budgetar gratis
 
 - [ ] **Scenario Planning**
@@ -493,13 +494,16 @@
   - [ ] Rekonsiliering mot bankutdrag
   - [ ] Jämförelse och verifiering
 
-- [ ] **Tags & Projects**
+- [x] **Tags & Projects** ✅ DELVIS KLART (Projektbudgetar)
   - [ ] Lägg till tags på utgifter
-  - [ ] Skapa projekt (t.ex. "Portugal 2025")
+  - [x] Skapa projekt (t.ex. "Portugal 2025") via projektbudgetar
   - [ ] Filtra utgifter per tag/projekt
-  - [ ] Projekt-specifik budget och spårning
-  - [ ] Visa totalt per projekt/tag
+  - [x] Projekt-specifik budget och spårning (temporary_budgets)
+  - [x] Visa totalt per projekt/tag
   - [ ] Projekt-rapporter
+  - [x] Tilldela utgifter till projektbudget från vanliga utgiftsformuläret
+  - [x] Länka projektbudget till månadsbudgetkategori (linked_category_id)
+  - [x] Projektbudgetar visas i kategori-dropdown i utgiftsformuläret
 
 - [ ] **Multi-Currency Support** (Premium)
   - [ ] Lägg till utgifter i olika valutor
@@ -630,9 +634,28 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-01-30
+**Senast uppdaterad:** 2026-02-25
 
-### Senaste ändringar (2026-01-30):
+### Senaste ändringar (2026-02-25):
+- ✅ **Projektbudgetar i utgiftsformuläret:**
+  - Aktiva projektbudgetar visas som "Projektbudgetar"-sektion i kategori-dropdown
+  - Välj projekt (generell) eller projekt-underkategori för att tilldela utgift
+  - Projekt med `linked_category_id` använder den kategorin automatiskt
+  - Projekt utan länkad kategori sparar utgift utan `category_id` (projektspårning utan månadsbudget)
+  - `total_spent` uppdateras automatiskt efter sparad utgift
+  - Sökfunktionen inkluderar projektnamn och underkategorier
+
+- ✅ **Projektbudget-inställningar utökade:**
+  - `linked_category_id` — länka projektbudget till månadsbudgetkategori
+  - Ny migration: `20240101000022_temporary_budget_linked_category.sql`
+  - Inställningsdialog utökad med kategori-väljare
+
+- ✅ **Database: nullable category_id på expenses:**
+  - `category_id` på expenses-tabellen är nu nullable (migration `20240101000023`)
+  - Alla komponenter uppdaterade med null-safety (optional chaining, fallbacks)
+  - TypeScript-typer uppdaterade (`database.ts`, `index.ts`)
+
+### Tidigare ändringar (2026-01-30):
 - ✅ **Budget-baserad "Kvar att spendera" beräkning:**
   - Uppdaterad Dashboard och Budget-sidor för konsekvent beräkning
   - "Kvar att spendera" = BudgetTotal - SpentTotal (budgetbaserat, inte kassaflödesbaserat)

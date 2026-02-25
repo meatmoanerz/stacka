@@ -148,7 +148,7 @@ export function useCreateExpense() {
       const createdExpense = data as ExpenseWithCategory
 
       // Check if the category is linked to a savings goal
-      if (createdExpense.category?.linked_savings_goal_id) {
+      if (createdExpense.category && createdExpense.category.linked_savings_goal_id) {
         // Calculate user amounts based on cost assignment
         let user1Amount = createdExpense.amount
         let user2Amount = 0
@@ -194,13 +194,13 @@ export function useCreateExpense() {
 
       // Get the category for the optimistic expense
       const categories = queryClient.getQueryData<Category[]>(['categories'])
-      const category = categories?.find(c => c.id === newExpense.category_id)
+      const category = newExpense.category_id ? categories?.find(c => c.id === newExpense.category_id) : null
 
       // Create optimistic expense with temp ID
       const optimisticExpense: OptimisticExpenseWithCategory = {
         id: generateTempId(),
         user_id: newExpense.user_id || '',
-        category_id: newExpense.category_id,
+        category_id: newExpense.category_id || null,
         amount: newExpense.amount,
         description: newExpense.description,
         date: newExpense.date || format(new Date(), 'yyyy-MM-dd'),
@@ -221,12 +221,12 @@ export function useCreateExpense() {
         original_amount: newExpense.original_amount || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        category: category || {
+        category: category || (newExpense.category_id ? {
           id: newExpense.category_id,
           user_id: '',
           name: 'Laddar...',
-          cost_type: 'Variable',
-          subcategory: 'Other',
+          cost_type: 'Variable' as const,
+          subcategory: 'Other' as const,
           default_value: 0,
           is_default: false,
           is_shared_expense: false,
@@ -234,7 +234,7 @@ export function useCreateExpense() {
           linked_savings_goal_id: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        },
+        } : null),
         _isOptimistic: true,
       }
 

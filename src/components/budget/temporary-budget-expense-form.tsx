@@ -126,7 +126,8 @@ export function TemporaryBudgetExpenseForm({
       toast.error('Ange en beskrivning')
       return
     }
-    if (!selectedRegularCategoryId) {
+    const effectiveCategoryId = budget.linked_category_id || selectedRegularCategoryId
+    if (!effectiveCategoryId) {
       toast.error('Välj en kategori')
       return
     }
@@ -139,7 +140,7 @@ export function TemporaryBudgetExpenseForm({
         user_id: user?.id || '',
         amount: amountSEK,
         description: description.trim(),
-        category_id: selectedRegularCategoryId,
+        category_id: effectiveCategoryId,
         date,
         cost_assignment: costAssignment,
         is_ccm: isCCM,
@@ -284,8 +285,8 @@ export function TemporaryBudgetExpenseForm({
             </div>
           )}
 
-          {/* Regular Category (required) */}
-          <div className="space-y-2">
+          {/* Regular Category (required) — hidden when linked to a monthly budget category */}
+          {!budget.linked_category_id && <div className="space-y-2">
             <Label className="text-muted-foreground text-sm">Budgetkategori</Label>
             <div className="relative">
               <div
@@ -403,7 +404,7 @@ export function TemporaryBudgetExpenseForm({
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Date */}
           <div className="space-y-2">

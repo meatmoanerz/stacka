@@ -210,6 +210,8 @@ npx vercel --prod
 ## Version History
 
 ```
+v0.3.4 - Project budgets in expense form, linked categories, nullable category_id
+v0.3.3 - Project budget (temporary budget) feature, expense edit project assignment
 v0.3.1 - Statement Analyzer: Bulk categorization, simplified transaction review flow
 v0.3.0 - Admin dashboard, monthly income tracking, partner loans API
 v0.2.0 - Enhanced savings goals: auto-category creation, expense contributions, custom goal types, detail page
@@ -247,6 +249,6 @@ npx vercel alias <previous-deployment-url> stacka-three.vercel.app
 
 ---
 
-**Last Updated**: v0.3.1 - 2026-01-28
+**Last Updated**: v0.3.4 - 2026-02-25
 **Maintainer**: Development Team
 **Production URL**: https://stacka-three.vercel.app

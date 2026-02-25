@@ -328,7 +328,7 @@ export type Database = {
         Row: {
           id: string
           user_id: string
-          category_id: string
+          category_id: string | null
           amount: number
           description: string
           date: string
@@ -353,7 +353,7 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
-          category_id: string
+          category_id?: string | null
           amount: number
           description: string
           date?: string
@@ -378,7 +378,7 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
-          category_id?: string
+          category_id?: string | null
           amount?: number
           description?: string
           date?: string
@@ -743,6 +743,7 @@ export type Database = {
           start_date: string
           end_date: string
           linked_budget_period: string | null
+          linked_category_id: string | null
           status: 'active' | 'completed' | 'archived'
           is_shared: boolean
           archived_at: string | null
@@ -762,6 +763,7 @@ export type Database = {
           start_date: string
           end_date: string
           linked_budget_period?: string | null
+          linked_category_id?: string | null
           status?: 'active' | 'completed' | 'archived'
           is_shared?: boolean
           archived_at?: string | null
@@ -781,6 +783,7 @@ export type Database = {
           start_date?: string
           end_date?: string
           linked_budget_period?: string | null
+          linked_category_id?: string | null
           status?: 'active' | 'completed' | 'archived'
           is_shared?: boolean
           archived_at?: string | null

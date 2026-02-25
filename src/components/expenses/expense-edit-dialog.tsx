@@ -97,7 +97,7 @@ export function ExpenseEditDialog({ expense, open, onOpenChange }: ExpenseEditDi
       form.reset({
         amount: expense.amount,
         description: expense.description,
-        category_id: expense.category_id,
+        category_id: expense.category_id || '',
         date: dateStr,
         is_ccm: expense.is_ccm || false,
         cost_assignment: expense.cost_assignment || 'personal',
