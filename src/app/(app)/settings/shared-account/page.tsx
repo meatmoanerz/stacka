@@ -126,19 +126,33 @@ export default function SharedAccountPage() {
     })
   }
 
-  // Calculate totals
+  // Calculate totals using actual assignments when available
   const totals = useMemo(() => {
     const selectedItems = allItemsList.filter(item => selectedCategories.has(item.category_id || ''))
     const total = selectedItems.reduce((sum, item) => sum + item.amount, 0)
-    const perPerson = total / 2
+
+    let userTotal = 0
+    let partnerTotal = 0
+
+    selectedItems.forEach(item => {
+      const assignment = item.budget_item_assignments?.find(a => a.user_id === user?.id)
+      if (assignment) {
+        userTotal += assignment.amount
+        partnerTotal += item.amount - assignment.amount
+      } else {
+        userTotal += item.amount / 2
+        partnerTotal += item.amount / 2
+      }
+    })
 
     return {
       total,
-      perPerson,
+      userTotal,
+      partnerTotal,
       selectedCount: selectedItems.length,
       items: selectedItems,
     }
-  }, [allItemsList, selectedCategories])
+  }, [allItemsList, selectedCategories, user?.id])
 
   const hasPartner = !!partner
 
@@ -204,11 +218,11 @@ export default function SharedAccountPage() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/20">
                 <div>
                   <p className="text-white/70 text-xs">Du betalar</p>
-                  <p className="text-xl font-semibold">{formatCurrency(totals.perPerson)}</p>
+                  <p className="text-xl font-semibold">{formatCurrency(totals.userTotal)}</p>
                 </div>
                 <div>
                   <p className="text-white/70 text-xs">{partner?.first_name || 'Partner'} betalar</p>
-                  <p className="text-xl font-semibold">{formatCurrency(totals.perPerson)}</p>
+                  <p className="text-xl font-semibold">{formatCurrency(totals.partnerTotal)}</p>
                 </div>
               </div>
             )}
@@ -231,7 +245,7 @@ export default function SharedAccountPage() {
             <CardContent className="p-4 flex items-start gap-3">
               <Info className="w-5 h-5 text-stacka-olive shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground">
-                Koppla en partner för att automatiskt beräkna 50/50-uppdelning av gemensamma kostnader.
+                Koppla en partner för att automatiskt beräkna uppdelning av gemensamma kostnader baserat på budgetens fördelning.
               </p>
             </CardContent>
           </Card>
@@ -423,10 +437,16 @@ export default function SharedAccountPage() {
                 <span className="font-bold text-lg">{formatCurrency(totals.total)}</span>
               </div>
               {hasPartner && (
-                <div className="flex items-center justify-between text-sm text-stacka-olive">
-                  <span>Per person (50/50)</span>
-                  <span className="font-semibold">{formatCurrency(totals.perPerson)}</span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between text-sm text-stacka-olive">
+                    <span>Du betalar</span>
+                    <span className="font-semibold">{formatCurrency(totals.userTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-stacka-olive">
+                    <span>{partner?.first_name || 'Partner'} betalar</span>
+                    <span className="font-semibold">{formatCurrency(totals.partnerTotal)}</span>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

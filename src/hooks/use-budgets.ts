@@ -34,7 +34,8 @@ export function useBudget(id: string) {
           *,
           budget_items(
             *,
-            category:categories(*)
+            category:categories(*),
+            budget_item_assignments(*)
           )
         `)
         .eq('id', id)
@@ -61,7 +62,8 @@ export function useBudgetByPeriod(period: string) {
           *,
           budget_items(
             *,
-            category:categories(*)
+            category:categories(*),
+            budget_item_assignments(*)
           )
         `)
         .eq('period', period)
@@ -104,7 +106,8 @@ export function usePreviousBudget(currentPeriod: string) {
           *,
           budget_items(
             *,
-            category:categories(*)
+            category:categories(*),
+            budget_item_assignments(*)
           )
         `)
         .eq('period', previousPeriod)

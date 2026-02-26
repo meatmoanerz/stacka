@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils/cn'
 import { motion } from 'framer-motion'
+import { triggerHaptic } from '@/hooks/use-capacitor'
 
 // Custom icons with filled/outlined variants
 function HomeIcon({ filled, className }: { filled?: boolean; className?: string }) {
@@ -155,6 +156,7 @@ export function BottomNav({ className }: BottomNavProps) {
                 href={item.href}
                 className="relative flex items-center justify-center -mt-6"
                 aria-label="Lägg till ny utgift"
+                onClick={() => triggerHaptic('medium')}
               >
                 <motion.div
                   whileTap={{ scale: 0.9 }}
@@ -176,6 +178,7 @@ export function BottomNav({ className }: BottomNavProps) {
               )}
               aria-label={item.label}
               aria-current={isActive ? 'page' : undefined}
+              onClick={() => triggerHaptic('light')}
             >
               <Icon filled={isActive} className="w-5 h-5" aria-hidden="true" />
               <span className="text-[10px] font-medium">{item.label}</span>

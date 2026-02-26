@@ -5,10 +5,17 @@ import { ThemeProvider } from 'next-themes'
 import { Toaster } from 'sonner'
 import { useState } from 'react'
 import { useKeyboard } from '@/hooks/use-keyboard'
+import { useCapacitorInit } from '@/hooks/use-capacitor'
 
 // Component to initialize keyboard detection globally
 function KeyboardDetector() {
   useKeyboard()
+  return null
+}
+
+// Component to initialize Capacitor native plugins (no-op on web)
+function CapacitorInit() {
+  useCapacitorInit()
   return null
 }
 
@@ -32,6 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         storageKey="stacka-theme"
       >
         <KeyboardDetector />
+        <CapacitorInit />
         {children}
         <Toaster
           richColors

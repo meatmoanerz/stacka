@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Supabase temp files
 supabase/.temp/
+
+# Capacitor native projects (generated - commit only if needed)
+/ios/
+/android/

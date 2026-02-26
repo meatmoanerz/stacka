@@ -210,6 +210,7 @@ npx vercel --prod
 ## Version History
 
 ```
+v0.3.5 - CCM budget split auto-calculation, budget_item_assignments persistence, Gemensamt konto per-partner allocations
 v0.3.4 - Project budgets in expense form, linked categories, nullable category_id
 v0.3.3 - Project budget (temporary budget) feature, expense edit project assignment
 v0.3.1 - Statement Analyzer: Bulk categorization, simplified transaction review flow
@@ -249,6 +250,6 @@ npx vercel alias <previous-deployment-url> stacka-three.vercel.app
 
 ---
 
-**Last Updated**: v0.3.4 - 2026-02-25
+**Last Updated**: v0.3.5 - 2026-02-26
 **Maintainer**: Development Team
 **Production URL**: https://stacka-three.vercel.app

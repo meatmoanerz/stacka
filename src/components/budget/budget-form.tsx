@@ -23,6 +23,8 @@ import { useCreateBudget, useUpdateBudget, useDeleteBudget, usePreviousBudget, u
 import { useUser, usePartner } from '@/hooks/use-user'
 import { useLoans } from '@/hooks/use-loans'
 import { useCCMInvoice } from '@/hooks/use-ccm-invoices'
+import { useCCMExpenses, groupExpensesByInvoicePeriod } from '@/hooks/use-expenses'
+import { calculatePaymentSplit } from '@/lib/utils/ccm-split'
 import { formatCurrency, formatPercentage } from '@/lib/utils/formatters'
 import { formatPeriodDisplay, getCurrentBudgetPeriod, getNextPeriods } from '@/lib/utils/budget-period'
 import { toast } from 'sonner'
@@ -116,8 +118,10 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
   // Monthly incomes for the selected period (preferred over static incomes)
   const { data: monthlyIncomes, isLoading: monthlyIncomesLoading } = useHouseholdMonthlyIncomes(period)
 
-  // CCM invoice for auto-filling "Kreditkort" budget item
+  // CCM invoice and expenses for auto-filling "Kreditkort" budget item with split
   const { data: ccmInvoice } = useCCMInvoice(period)
+  const invoiceBreakDate = user?.ccm_invoice_break_date || 1
+  const { data: ccmExpenses = [] } = useCCMExpenses(invoiceBreakDate)
   
   // Check if selected period already has a saved budget (only relevant in /new)
   const { data: existingPeriodBudget, isLoading: checkingExistingBudget } = useBudgetByPeriod(
@@ -362,9 +366,25 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
         else if (cat.name === 'Amortering' && loanTotals.totalAmortization > 0) {
           defaultValue = loanTotals.totalAmortization
         }
-        // Auto-fill "Kreditkort" from CCM invoice
+        // Auto-fill "Kreditkort" from CCM invoice with per-partner split
         else if (cat.name === 'Kreditkort' && ccmInvoice?.actual_amount && ccmInvoice.actual_amount > 0) {
           defaultValue = ccmInvoice.actual_amount
+
+          if (user && partner) {
+            const grouped = groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
+            const periodExpenses = grouped.get(period) || []
+            const split = calculatePaymentSplit(periodExpenses, defaultValue, user.id, partner.id)
+
+            items[cat.id] = {
+              total: defaultValue,
+              userAmount: Math.round(split.userAmount),
+              partnerAmount: Math.round(split.partnerAmount),
+              isSplit: false,
+              hasExplicitSplit: true,
+              is_ccm: true,
+            }
+            return
+          }
         }
 
         items[cat.id] = {
@@ -406,7 +426,7 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
     }
     
     setPeriodChanged(false)
-  }, [period, periodChanged, initialized, existingBudget, fixed, variable, savings, getDraftKey, householdData])
+  }, [period, periodChanged, initialized, existingBudget, fixed, variable, savings, getDraftKey, householdData, ccmInvoice, ccmExpenses, invoiceBreakDate, user, partner])
 
   // Initialize incomes from database
   // Prefer monthly incomes for the period if they exist, otherwise fall back to static incomes
@@ -461,15 +481,29 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
     if (allCategories.length === 0) return
 
     if (existingBudget?.budget_items) {
-      // Editing existing budget - use its values
+      // Editing existing budget - use its values, restore assignments
       const items: Record<string, BudgetItemState> = {}
       existingBudget.budget_items.forEach(item => {
         if (item.category_id) {
-          items[item.category_id] = {
-            total: item.amount,
-            isSplit: false,
-            hasExplicitSplit: false,
-            is_ccm: item.is_ccm || false,
+          const assignment = item.budget_item_assignments?.find(a => a.user_id === user?.id)
+          if (assignment) {
+            const userAmount = assignment.amount
+            const partnerAmount = item.amount - userAmount
+            items[item.category_id] = {
+              total: item.amount,
+              userAmount,
+              partnerAmount,
+              isSplit: false,
+              hasExplicitSplit: true,
+              is_ccm: item.is_ccm || false,
+            }
+          } else {
+            items[item.category_id] = {
+              total: item.amount,
+              isSplit: false,
+              hasExplicitSplit: false,
+              is_ccm: item.is_ccm || false,
+            }
           }
         }
       })
@@ -550,23 +584,39 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
         else if (cat.name === 'Amortering' && loanTotals.totalAmortization > 0) {
           defaultValue = loanTotals.totalAmortization
         }
-        // Auto-fill "Kreditkort" from CCM invoice
+        // Auto-fill "Kreditkort" from CCM invoice with per-partner split
         else if (cat.name === 'Kreditkort' && ccmInvoice?.actual_amount && ccmInvoice.actual_amount > 0) {
           defaultValue = ccmInvoice.actual_amount
+
+          if (user && partner) {
+            const grouped = groupExpensesByInvoicePeriod(ccmExpenses, invoiceBreakDate)
+            const periodExpenses = grouped.get(period) || []
+            const split = calculatePaymentSplit(periodExpenses, defaultValue, user.id, partner.id)
+
+            items[cat.id] = {
+              total: defaultValue,
+              userAmount: Math.round(split.userAmount),
+              partnerAmount: Math.round(split.partnerAmount),
+              isSplit: false,
+              hasExplicitSplit: true,
+              is_ccm: true,
+            }
+            return
+          }
         }
 
         items[cat.id] = {
           total: defaultValue,
           isSplit: false,
           hasExplicitSplit: false,
-          is_ccm: cat.name === 'Kreditkort', // Auto-mark Kreditkort as CCM
+          is_ccm: cat.name === 'Kreditkort',
         }
       })
       setBudgetItems(items)
       setInitialized(true)
       setDraftLoaded(true)
     }
-  }, [existingBudget, fixed, variable, savings, categoriesLoading, initialized, period, householdData, loanTotals, ccmInvoice])
+  }, [existingBudget, fixed, variable, savings, categoriesLoading, initialized, period, householdData, loanTotals, ccmInvoice, ccmExpenses, invoiceBreakDate, user, partner])
 
   // Calculations
   const userIncome = useMemo(() => 
@@ -836,8 +886,30 @@ export function BudgetForm({ existingBudget, defaultPeriod }: BudgetFormProps) {
 
       if (items.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: itemsError } = await (supabase.from('budget_items') as any).insert(items)
+        const { data: insertedItems, error: itemsError } = await (supabase.from('budget_items') as any).insert(items).select()
         if (itemsError) throw itemsError
+
+        // Insert budget_item_assignments for items with explicit splits
+        if (insertedItems && insertedItems.length > 0) {
+          const assignments: { budget_item_id: string; user_id: string; amount: number }[] = []
+
+          insertedItems.forEach((inserted: { id: string; category_id: string }) => {
+            const itemState = budgetItems[inserted.category_id]
+            if (itemState?.hasExplicitSplit && itemState.userAmount !== undefined) {
+              assignments.push({
+                budget_item_id: inserted.id,
+                user_id: user.id,
+                amount: itemState.userAmount,
+              })
+            }
+          })
+
+          if (assignments.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error: assignError } = await (supabase.from('budget_item_assignments') as any).insert(assignments)
+            if (assignError) throw assignError
+          }
+        }
       }
 
       // Clear draft on successful save

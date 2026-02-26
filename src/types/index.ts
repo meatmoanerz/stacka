@@ -40,6 +40,7 @@ export interface ExpenseWithCategory extends Expense {
 
 export interface BudgetItemWithCategory extends BudgetItem {
   category?: Category | null
+  budget_item_assignments?: BudgetItemAssignment[]
 }
 
 export interface BudgetWithItems extends Budget {

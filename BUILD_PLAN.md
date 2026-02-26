@@ -634,9 +634,26 @@
 - Lägg till nya funktioner när de identifieras
 - Justera prioriteringar baserat på feedback
 
-**Senast uppdaterad:** 2026-02-25
+**Senast uppdaterad:** 2026-02-26
 
-### Senaste ändringar (2026-02-25):
+### Senaste ändringar (2026-02-26):
+- ✅ **CCM → Budget split auto-beräkning:**
+  - `calculatePaymentSplit` extraherad till delad utility (`src/lib/utils/ccm-split.ts`)
+  - Budget-formuläret auto-fyller "Kreditkort"-kategorin med per-partner split från CCM-beräkningen
+  - Splitten visas direkt i budget-formuläret vid skapande av ny budget
+
+- ✅ **budget_item_assignments aktiverade:**
+  - Budget-items med explicit split sparas nu till `budget_item_assignments`-tabellen
+  - Vid redigering av budget återställs sparade splits från databasen
+  - Alla budget-query-hooks inkluderar nu `budget_item_assignments` i sina queries
+  - `BudgetItemWithCategory`-typen utökad med optional `budget_item_assignments`
+
+- ✅ **Gemensamt konto per-partner belopp:**
+  - Använder faktiska `budget_item_assignments` istället för hårdkodad 50/50-uppdelning
+  - Faller tillbaka på 50/50 för kategorier utan explicit split
+  - Visar separata belopp per partner i sammanfattning och totalsummor
+
+### Tidigare ändringar (2026-02-25):
 - ✅ **Projektbudgetar i utgiftsformuläret:**
   - Aktiva projektbudgetar visas som "Projektbudgetar"-sektion i kategori-dropdown
   - Välj projekt (generell) eller projekt-underkategori för att tilldela utgift
